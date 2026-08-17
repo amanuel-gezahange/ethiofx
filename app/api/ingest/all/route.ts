@@ -17,29 +17,20 @@ function isAuthorized(req: NextRequest) {
 
   const auth = req.headers.get("authorization");
 
-  return Boolean(
-    env.INGEST_SECRET &&
-      auth === `Bearer ${env.INGEST_SECRET}`
-  );
+  return Boolean(env.INGEST_SECRET && auth === `Bearer ${env.INGEST_SECRET}`);
 }
 
-const providers: RateProvider[] = [
-  cbeProvider,
-  wegagenProvider,
-];
+const providers: RateProvider[] = [cbeProvider, wegagenProvider];
 
 export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!hasSupabaseConfig()) {
     return NextResponse.json(
       {
-        error: "Supabase is not configured",
+        error: "Supabase is not configured"
       },
       { status: 500 }
     );
@@ -56,11 +47,7 @@ export async function POST(req: NextRequest) {
       return {
         provider: provider.slug,
         inserted: result.inserted,
-        currencies: [
-          ...new Set(
-            rates.map((rate) => rate.currency)
-          ),
-        ],
+        currencies: [...new Set(rates.map((rate) => rate.currency))]
       };
     })
   );
@@ -70,9 +57,8 @@ export async function POST(req: NextRequest) {
 
     if (result.status === "fulfilled") {
       return {
-        provider: provider.slug,
         success: true,
-        ...result.value,
+        ...result.value
       };
     }
 
@@ -81,25 +67,18 @@ export async function POST(req: NextRequest) {
         ? result.reason.message
         : "Unknown ingestion error";
 
-    console.error(
-      `[ingest:${provider.slug}]`,
-      result.reason
-    );
+    console.error(`[ingest:${provider.slug}]`, result.reason);
 
     return {
       provider: provider.slug,
       success: false,
-      error: message,
+      error: message
     };
   });
 
-  const successful = summary.filter(
-    (item) => item.success
-  );
+  const successful = summary.filter((item) => item.success);
 
-  const failed = summary.filter(
-    (item) => !item.success
-  );
+  const failed = summary.filter((item) => !item.success);
 
   return NextResponse.json(
     {
@@ -111,16 +90,13 @@ export async function POST(req: NextRequest) {
       providers: {
         total: providers.length,
         successful: successful.length,
-        failed: failed.length,
+        failed: failed.length
       },
 
-      results: summary,
+      results: summary
     },
     {
-      status:
-        successful.length === 0
-          ? 502
-          : 200,
+      status: successful.length === 0 ? 502 : 200
     }
   );
 }
