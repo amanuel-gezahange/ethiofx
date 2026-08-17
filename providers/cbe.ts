@@ -1,7 +1,8 @@
 import type { FxRate } from "@/lib/types";
 import type { RateProvider } from "./provider";
 
-const SOURCE_URL = "https://combanketh.et/cbeapi/daily-exchange-rates/";
+const SOURCE_URL =
+  "https://combanketh.et/cbeapi/daily-exchange-rates/?_sort=Date:DESC&_limit=1";
 
 type CbeCurrency = {
   CurrencyCode?: string;
