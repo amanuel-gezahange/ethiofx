@@ -7,6 +7,7 @@ import { wegagenProvider } from "@/providers/wegagen";
 import { saveProviderRates } from "@/lib/db/rates";
 import { env, hasSupabaseConfig } from "@/lib/env";
 import type { RateProvider } from "@/providers/provider";
+import { abyssiniaProvider } from "@/providers/abyssinia";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,7 +32,7 @@ function isAuthorized(req: NextRequest) {
   return ingestAuthorized || cronAuthorized;
 }
 
-const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider];
+const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider, abyssiniaProvider];
 
 async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
