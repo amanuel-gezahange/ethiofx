@@ -42,6 +42,18 @@ function normalizeRate(row: ApiRate): FxRate {
   };
 }
 
+const STALE_AFTER_MS = 12 * 60 * 60 * 1000;
+
+function isStale(iso: string) {
+  const ts = new Date(iso).getTime();
+
+  if (!Number.isFinite(ts)) {
+    return true;
+  }
+
+  return Date.now() - ts >= STALE_AFTER_MS;
+}
+
 function relativeTime(iso: string) {
   const ts = new Date(iso).getTime();
   const diffMs = Math.max(0, Date.now() - ts);
@@ -124,6 +136,8 @@ export default function Home() {
     .filter(Number.isFinite)
     .sort((a, b) => b - a)[0];
 
+  const hasStaleRates = rates.some((r) => isStale(r.fetchedAt));
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -138,10 +152,12 @@ export default function Home() {
         <div className="live">
           <span />
           {loading
-            ? "Loading live rates..."
+            ? "Loading rates..."
             : latestFetchedAt
-              ? `Live · ${relativeTime(new Date(latestFetchedAt).toISOString())}`
-              : "Live"}
+              ? `${hasStaleRates ? "Some rates stale" : "Live"} · ${relativeTime(
+                new Date(latestFetchedAt).toISOString()
+              )}`
+              : "No rates"}
         </div>
       </header>
 
@@ -207,7 +223,10 @@ export default function Home() {
             <p className="rate">
               {intent === "sell-foreign" ? best.buy : best.sell} ETB / USD
             </p>
-            <p className="freshness">Last verified {relativeTime(best.fetchedAt)}</p>
+            <p className="freshness">
+              {isStale(best.fetchedAt) ? "Stale" : "Live"} · verified{" "}
+              {relativeTime(best.fetchedAt)}
+            </p>
           </div>
 
           <div className="bestNumbers">
@@ -266,7 +285,10 @@ export default function Home() {
                     <b>{r.bank}</b>
                     <span className="bankMeta">
                       <a href={r.sourceUrl} target="_blank" rel="noreferrer">source</a>
-                      <small>· verified {relativeTime(r.fetchedAt)}</small>
+                      <small>
+                        · {isStale(r.fetchedAt) ? "stale" : "live"} · verified{" "}
+                        {relativeTime(r.fetchedAt)}
+                      </small>
                     </span>
                   </span>
                   <span className={intent === "sell-foreign" ? "focus" : ""}>{r.buy}</span>

@@ -17,6 +17,11 @@ type CbeRate = {
   currency?: CbeCurrency;
 };
 
+type CbeSnapshot = {
+  Date?: string;
+  ExchangeRate?: CbeRate[];
+};
+
 type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
@@ -71,6 +76,39 @@ function validPair(buy: unknown, sell: unknown): buy is number {
   return validRate(buy) && validRate(sell) && sell > buy;
 }
 
+function findSnapshot(value: unknown): CbeSnapshot | null {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findSnapshot(item);
+
+      if (found) {
+        return found;
+      }
+    }
+
+    return null;
+  }
+
+  if (isRecord(value)) {
+    if (typeof value.Date === "string" && Array.isArray(value.ExchangeRate)) {
+      return {
+        Date: value.Date,
+        ExchangeRate: value.ExchangeRate as CbeRate[]
+      };
+    }
+
+    for (const child of Object.values(value)) {
+      const found = findSnapshot(child);
+
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
+}
+
 export class CbeProvider implements RateProvider {
   readonly name = "Commercial Bank of Ethiopia";
   readonly slug = "cbe";
@@ -91,13 +129,19 @@ export class CbeProvider implements RateProvider {
 
     const data: unknown = await response.json();
 
-    const cbeRates = findRateArray(data);
+    const snapshot = findSnapshot(data);
 
-    if (!cbeRates) {
+    if (!snapshot?.ExchangeRate || !snapshot.Date) {
       throw new Error(
-        "CBE API response did not contain an exchange-rate array."
+        "CBE API response did not contain a valid dated exchange-rate snapshot."
       );
     }
+
+    const cbeRates = snapshot.ExchangeRate;
+
+    const effectiveAt = new Date(
+      `${snapshot.Date}T00:00:00+03:00`
+    ).toISOString();
 
     const fetchedAt = new Date().toISOString();
 
@@ -119,7 +163,7 @@ export class CbeProvider implements RateProvider {
           sell: item.transactionalSelling!,
           rateType: "transaction",
           sourceUrl: SOURCE_URL,
-          effectiveAt: null,
+          effectiveAt,
           fetchedAt
         });
       }
@@ -168,7 +212,7 @@ export class CbeProvider implements RateProvider {
           sell: item.cashSelling!,
           rateType: "cash",
           sourceUrl: SOURCE_URL,
-          effectiveAt: null,
+          effectiveAt,
           fetchedAt
         });
       }

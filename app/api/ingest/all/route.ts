@@ -11,18 +11,28 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function isAuthorized(req: NextRequest) {
-  if (process.env.NODE_ENV === "development" && !env.INGEST_SECRET) {
+  if (
+    process.env.NODE_ENV === "development" &&
+    !env.INGEST_SECRET &&
+    !env.CRON_SECRET
+  ) {
     return true;
   }
 
   const auth = req.headers.get("authorization");
 
-  return Boolean(env.INGEST_SECRET && auth === `Bearer ${env.INGEST_SECRET}`);
+  const ingestAuthorized =
+    Boolean(env.INGEST_SECRET) && auth === `Bearer ${env.INGEST_SECRET}`;
+
+  const cronAuthorized =
+    Boolean(env.CRON_SECRET) && auth === `Bearer ${env.CRON_SECRET}`;
+
+  return ingestAuthorized || cronAuthorized;
 }
 
 const providers: RateProvider[] = [cbeProvider, wegagenProvider];
 
-export async function POST(req: NextRequest) {
+async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
@@ -99,4 +109,12 @@ export async function POST(req: NextRequest) {
       status: successful.length === 0 ? 502 : 200
     }
   );
+}
+
+export async function POST(req: NextRequest) {
+  return ingest(req);
+}
+
+export async function GET(req: NextRequest) {
+  return ingest(req);
 }
