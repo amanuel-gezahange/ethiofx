@@ -1,3 +1,4 @@
+import { coopProvider } from "@/providers/coop";
 import { NextRequest, NextResponse } from "next/server";
 
 import { cbeProvider } from "@/providers/cbe";
@@ -30,7 +31,7 @@ function isAuthorized(req: NextRequest) {
   return ingestAuthorized || cronAuthorized;
 }
 
-const providers: RateProvider[] = [cbeProvider, wegagenProvider];
+const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider];
 
 async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
