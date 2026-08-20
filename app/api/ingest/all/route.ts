@@ -8,6 +8,7 @@ import { saveProviderRates } from "@/lib/db/rates";
 import { env, hasSupabaseConfig } from "@/lib/env";
 import type { RateProvider } from "@/providers/provider";
 import { abyssiniaProvider } from "@/providers/abyssinia";
+import { dashenProvider } from "@/providers/dashen";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,7 @@ function isAuthorized(req: NextRequest) {
   return ingestAuthorized || cronAuthorized;
 }
 
-const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider, abyssiniaProvider];
+const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider, abyssiniaProvider, dashenProvider];
 
 async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
