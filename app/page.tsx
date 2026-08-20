@@ -73,6 +73,7 @@ export default function Home() {
   const [amount, setAmount] = useState(10000);
   const [query, setQuery] = useState("");
   const [rates, setRates] = useState<FxRate[]>([]);
+  const [rateType, setRateType] = useState<"cash" | "transaction">("transaction");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,7 +86,7 @@ export default function Home() {
         setError(null);
 
         const response = await fetch(
-          "/api/rates?currency=USD&type=transaction",
+          `/api/rates?currency=USD&type=${rateType}`,
           { cache: "no-store", signal: controller.signal }
         );
 
@@ -105,7 +106,7 @@ export default function Home() {
 
     loadRates();
     return () => controller.abort();
-  }, []);
+  }, [rateType]);
 
   const visible = useMemo(() => {
     const filtered = rates.filter((r) =>
@@ -186,6 +187,21 @@ export default function Home() {
           </button>
         </div>
 
+        <div className="segmented">
+          <button
+            className={rateType === "transaction" ? "active" : ""}
+            onClick={() => setRateType("transaction")}
+          >
+            Transaction
+          </button>
+          <button
+            className={rateType === "cash" ? "active" : ""}
+            onClick={() => setRateType("cash")}
+          >
+            Cash
+          </button>
+        </div>
+
         <label>
           Amount
           <div className="amountWrap">
@@ -210,7 +226,7 @@ export default function Home() {
 
       {!loading && !error && rates.length === 0 && (
         <section className="card statusCard">
-          <strong>No live USD transaction rates are available yet.</strong>
+          <strong>No live USD {rateType} rates are available yet.</strong>
           <span>Run the ingestion endpoint and refresh this page.</span>
         </section>
       )}

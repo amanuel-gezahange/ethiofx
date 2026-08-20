@@ -9,6 +9,7 @@ import { env, hasSupabaseConfig } from "@/lib/env";
 import type { RateProvider } from "@/providers/provider";
 import { abyssiniaProvider } from "@/providers/abyssinia";
 import { dashenProvider } from "@/providers/dashen";
+import { HibretProvider } from "@/providers/hibret";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,9 @@ function isAuthorized(req: NextRequest) {
   return ingestAuthorized || cronAuthorized;
 }
 
-const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider, abyssiniaProvider, dashenProvider];
+const hibretProvider = new HibretProvider();
+
+const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider, abyssiniaProvider, dashenProvider, hibretProvider];
 
 async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
