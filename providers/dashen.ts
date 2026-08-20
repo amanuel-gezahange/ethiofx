@@ -14,24 +14,18 @@ function parseRate(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validPair(
-  buy: number | null,
-  sell: number | null
-): buy is number {
-  return (
-    buy !== null &&
-    sell !== null &&
-    buy > 0 &&
-    sell > 0 &&
-    sell >= buy
-  );
+function validPair(buy: number | null, sell: number | null): buy is number {
+  return buy !== null && sell !== null && buy > 0 && sell > 0 && sell >= buy;
 }
 
 function normalizeText(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
-function extractUsdCashRate(html: string): {
+function extractUsdRateFromTable(
+  html: string,
+  type: "cash" | "transaction"
+): {
   buy: number | null;
   sell: number | null;
 } {
@@ -45,13 +39,14 @@ function extractUsdCashRate(html: string): {
 
     const tableText = normalizeText($(table).text()).toLowerCase();
 
-    // We only want Dashen's Cash Buying / Cash Selling table.
-    if (
-      !tableText.includes("cash buying") ||
-      !tableText.includes("cash selling")
-    ) {
-      return;
-    }
+    const matchesType =
+      type === "cash"
+        ? tableText.includes("cash buying") &&
+          tableText.includes("cash selling")
+        : tableText.includes("transaction buying") &&
+          tableText.includes("transaction selling");
+
+    if (!matchesType) return;
 
     $(table)
       .find("tr")
@@ -65,11 +60,7 @@ function extractUsdCashRate(html: string): {
 
         if (cells.length < 4) return;
 
-        // First cell contains the flag image plus "USD".
-        const currency = cells[0]
-          .replace(/\s+/g, " ")
-          .trim()
-          .toUpperCase();
+        const currency = cells[0].toUpperCase();
 
         if (!currency.includes("USD")) return;
 
@@ -108,10 +99,7 @@ function extractEffectiveDate(html: string): string | null {
   return parsed.toISOString();
 }
 
-async function fetchWithRetry(
-  url: string,
-  attempts = 3
-): Promise<Response> {
+async function fetchWithRetry(url: string, attempts = 3): Promise<Response> {
   let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -130,14 +118,10 @@ async function fetchWithRetry(
       }
 
       if (response.status >= 400 && response.status < 500) {
-        throw new Error(
-          `Dashen Bank returned HTTP ${response.status}`
-        );
+        throw new Error(`Dashen Bank returned HTTP ${response.status}`);
       }
 
-      lastError = new Error(
-        `Dashen Bank returned HTTP ${response.status}`
-      );
+      lastError = new Error(`Dashen Bank returned HTTP ${response.status}`);
     } catch (error) {
       lastError = error;
 
@@ -147,9 +131,7 @@ async function fetchWithRetry(
     }
 
     if (attempt < attempts) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, attempt * 1000)
-      );
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
     }
   }
 
@@ -168,34 +150,48 @@ export class DashenProvider implements RateProvider {
 
     const html = await response.text();
 
-    const { buy, sell } = extractUsdCashRate(html);
-
-    if (!validPair(buy, sell)) {
-      throw new Error(
-        "Dashen Bank returned no valid USD cash rate."
-      );
-    }
+    const cash = extractUsdRateFromTable(html, "cash");
+    const transaction = extractUsdRateFromTable(html, "transaction");
 
     const fetchedAt = new Date().toISOString();
 
     // Prefer the date published on Dashen's page.
     // If unavailable, use fetch time so ingestion can still proceed.
-    const effectiveAt =
-      extractEffectiveDate(html) ?? fetchedAt;
+    const effectiveAt = extractEffectiveDate(html) ?? fetchedAt;
 
-    const output: FxRate[] = [
-      {
+    const output: FxRate[] = [];
+
+    if (validPair(cash.buy, cash.sell)) {
+      output.push({
         bank: this.name,
         slug: this.slug,
         currency: "USD",
-        buy,
-        sell: sell!,
+        buy: cash.buy,
+        sell: cash.sell!,
         rateType: "cash",
         sourceUrl: this.sourceUrl,
         effectiveAt,
         fetchedAt
-      }
-    ];
+      });
+    }
+
+    if (validPair(transaction.buy, transaction.sell)) {
+      output.push({
+        bank: this.name,
+        slug: this.slug,
+        currency: "USD",
+        buy: transaction.buy,
+        sell: transaction.sell!,
+        rateType: "transaction",
+        sourceUrl: this.sourceUrl,
+        effectiveAt,
+        fetchedAt
+      });
+    }
+
+    if (output.length === 0) {
+      throw new Error("Dashen Bank returned no valid USD rates.");
+    }
 
     return output;
   }
