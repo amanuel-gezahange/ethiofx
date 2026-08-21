@@ -11,6 +11,7 @@ import { abyssiniaProvider } from "@/providers/abyssinia";
 import { dashenProvider } from "@/providers/dashen";
 import { HibretProvider } from "@/providers/hibret";
 import { nibProvider } from "@/providers/nib";
+import { awashProvider } from "@/providers/awash";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -37,7 +38,7 @@ function isAuthorized(req: NextRequest) {
 
 const hibretProvider = new HibretProvider();
 
-const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider, abyssiniaProvider, dashenProvider, hibretProvider, nibProvider];
+const providers: RateProvider[] = [cbeProvider, coopProvider, wegagenProvider, abyssiniaProvider, dashenProvider, hibretProvider, nibProvider, awashProvider];
 
 async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
