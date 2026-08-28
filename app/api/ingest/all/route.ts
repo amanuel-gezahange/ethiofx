@@ -1,12 +1,8 @@
-import { coopProvider } from "@/providers/coop";
 import { NextRequest, NextResponse } from "next/server";
 
+import { coopProvider } from "@/providers/coop";
 import { cbeProvider } from "@/providers/cbe";
 import { wegagenProvider } from "@/providers/wegagen";
-
-import { saveProviderRates } from "@/lib/db/rates";
-import { env, hasSupabaseConfig } from "@/lib/env";
-import type { RateProvider } from "@/providers/provider";
 import { abyssiniaProvider } from "@/providers/abyssinia";
 import { dashenProvider } from "@/providers/dashen";
 import { HibretProvider } from "@/providers/hibret";
@@ -16,6 +12,13 @@ import { zemenProvider } from "@/providers/zemen";
 import { abayProvider } from "@/providers/abay";
 import { bunnaProvider } from "@/providers/bunna";
 import { tsehayProvider } from "@/providers/tsehay";
+import { amharaProvider } from "@/providers/amhara";
+import { enatProvider } from "@/providers/enat";
+import { berhanProvider } from "@/providers/berhan";
+
+import { saveProviderRates } from "@/lib/db/rates";
+import { env, hasSupabaseConfig } from "@/lib/env";
+import type { RateProvider } from "@/providers/provider";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,21 +35,55 @@ function isAuthorized(req: NextRequest) {
   const auth = req.headers.get("authorization");
 
   const ingestAuthorized =
-    Boolean(env.INGEST_SECRET) && auth === `Bearer ${env.INGEST_SECRET}`;
+    Boolean(env.INGEST_SECRET) &&
+    auth === `Bearer ${env.INGEST_SECRET}`;
 
   const cronAuthorized =
-    Boolean(env.CRON_SECRET) && auth === `Bearer ${env.CRON_SECRET}`;
+    Boolean(env.CRON_SECRET) &&
+    auth === `Bearer ${env.CRON_SECRET}`;
 
   return ingestAuthorized || cronAuthorized;
 }
 
 const hibretProvider = new HibretProvider();
 
-const providers: RateProvider[] = [cbeProvider, abayProvider, coopProvider, wegagenProvider, abyssiniaProvider, dashenProvider, hibretProvider, nibProvider, awashProvider, zemenProvider, bunnaProvider, tsehayProvider];
+const providers: RateProvider[] = [
+  cbeProvider,
+  abayProvider,
+  coopProvider,
+  wegagenProvider,
+  abyssiniaProvider,
+  dashenProvider,
+  hibretProvider,
+  nibProvider,
+  awashProvider,
+  zemenProvider,
+  bunnaProvider,
+  tsehayProvider,
+  amharaProvider,
+  enatProvider,
+  berhanProvider
+];
+
+type IngestResult =
+  | {
+      success: true;
+      provider: string;
+      inserted: number;
+      currencies: Awaited<ReturnType<RateProvider["fetchRates"]>>;
+    }
+  | {
+      success: false;
+      provider: string;
+      error: string;
+    };
 
 async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401 }
+    );
   }
 
   if (!hasSupabaseConfig()) {
@@ -60,65 +97,59 @@ async function ingest(req: NextRequest) {
 
   const startedAt = new Date().toISOString();
 
-  const results = await Promise.allSettled(
-    providers.map(async (provider) => {
+  const results: IngestResult[] = [];
+
+  for (const provider of providers) {
+    try {
       const rates = await provider.fetchRates();
 
       const result = await saveProviderRates(rates);
 
-      return {
+      results.push({
+        success: true,
         provider: provider.slug,
         inserted: result.inserted,
-        currencies: [...new Set(rates.map((rate) => rate.currency))]
-      };
-    })
-  );
+        currencies: rates
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unknown provider error";
 
-  const summary = results.map((result, index) => {
-    const provider = providers[index];
+      console.error(`[ingest:${provider.slug}]`, error);
 
-    if (result.status === "fulfilled") {
-      return {
-        success: true,
-        ...result.value
-      };
+      results.push({
+        success: false,
+        provider: provider.slug,
+        error: message
+      });
     }
+  }
 
-    const message =
-      result.reason instanceof Error
-        ? result.reason.message
-        : "Unknown ingestion error";
+  const successful = results.filter(
+    (item) => item.success
+  ).length;
 
-    console.error(`[ingest:${provider.slug}]`, result.reason);
-
-    return {
-      provider: provider.slug,
-      success: false,
-      error: message
-    };
-  });
-
-  const successful = summary.filter((item) => item.success);
-
-  const failed = summary.filter((item) => !item.success);
+  const failed = results.length - successful;
 
   return NextResponse.json(
     {
       startedAt,
       finishedAt: new Date().toISOString(),
 
-      success: failed.length === 0,
+      success: failed === 0,
 
       providers: {
         total: providers.length,
-        successful: successful.length,
-        failed: failed.length
+        successful,
+        failed
       },
 
-      results: summary
+      results
     },
     {
-      status: successful.length === 0 ? 502 : 200
+      status: successful === 0 ? 502 : 200
     }
   );
 }

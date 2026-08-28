@@ -21,26 +21,12 @@ function parseRate(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validPair(
-  buy: number | null,
-  sell: number | null
-): buy is number {
-  return (
-    buy !== null &&
-    sell !== null &&
-    buy > 0 &&
-    sell > 0 &&
-    sell >= buy
-  );
+function validPair(buy: number | null, sell: number | null): buy is number {
+  return buy !== null && sell !== null && buy > 0 && sell > 0 && sell >= buy;
 }
 
-function extractEffectiveDate(
-  $: cheerio.CheerioAPI
-): string | null {
-  const text = $("#exchange-rate .heading-date")
-    .first()
-    .text()
-    .trim();
+function extractEffectiveDate($: cheerio.CheerioAPI): string | null {
+  const text = $("#exchange-rate .heading-date").first().text().trim();
 
   if (!text) return null;
 
@@ -71,9 +57,7 @@ export class HibretProvider implements RateProvider {
     } as RequestInit & { dispatcher: Agent });
 
     if (!response.ok) {
-      throw new Error(
-        `Hibret Bank returned HTTP ${response.status}`
-      );
+      throw new Error(`Hibret Bank returned HTTP ${response.status}`);
     }
 
     const html = await response.text();
@@ -82,9 +66,7 @@ export class HibretProvider implements RateProvider {
     const effectiveAt = extractEffectiveDate($);
 
     if (!effectiveAt) {
-      throw new Error(
-        "Hibret Bank page did not contain an effective date."
-      );
+      throw new Error("Hibret Bank page did not contain an effective date.");
     }
 
     let buy: number | null = null;
@@ -110,9 +92,7 @@ export class HibretProvider implements RateProvider {
     });
 
     if (!validPair(buy, sell)) {
-      throw new Error(
-        "Hibret Bank returned no valid USD exchange rate."
-      );
+      throw new Error("Hibret Bank returned no valid USD exchange rate.");
     }
 
     const fetchedAt = new Date().toISOString();
@@ -125,6 +105,17 @@ export class HibretProvider implements RateProvider {
         buy,
         sell: sell!,
         rateType: "cash",
+        sourceUrl: this.sourceUrl,
+        effectiveAt,
+        fetchedAt
+      },
+      {
+        bank: this.name,
+        slug: this.slug,
+        currency: "USD",
+        buy,
+        sell: sell!,
+        rateType: "transaction",
         sourceUrl: this.sourceUrl,
         effectiveAt,
         fetchedAt

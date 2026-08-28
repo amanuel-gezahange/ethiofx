@@ -1,7 +1,7 @@
 import type { FxRate } from "@/lib/types";
 import type { RateProvider } from "./provider";
 
-const PAGE_URL = "https://awashbank.com/tarrifs/";
+const PAGE_URL = "https://awashbank.com/";
 const AJAX_URL = "https://awashbank.com/wp-admin/admin-ajax.php";
 
 type AwashUsdRate = {
@@ -149,18 +149,21 @@ export class AwashProvider implements RateProvider {
   readonly name = "Awash Bank";
   readonly slug = "awash";
   readonly sourceUrl = PAGE_URL;
-
   async fetchRates(): Promise<FxRate[]> {
     const html = await fetchPage();
-    const nonce = extractNonce(html);
+
+    const extractedNonce = extractNonce(html);
+
+    const nonce = extractedNonce ?? process.env.AWASH_NONCE;
 
     console.log("[awash-debug]", {
-      foundNonce: Boolean(nonce)
+      foundNonce: Boolean(extractedNonce),
+      usingEnvNonce: !extractedNonce && Boolean(process.env.AWASH_NONCE)
     });
 
     if (!nonce) {
       throw new Error(
-        "Awash Bank page did not contain exchangeRatesVars.nonce."
+        "Awash Bank nonce was unavailable. Set AWASH_NONCE in .env.local."
       );
     }
 
@@ -176,6 +179,7 @@ export class AwashProvider implements RateProvider {
     const cashSell = parseRate(usd.selling);
 
     const transactionBuy = parseRate(usd.transaction_buying);
+
     const transactionSell = parseRate(usd.transaction_selling);
 
     const fetchedAt = new Date().toISOString();
@@ -219,6 +223,15 @@ export class AwashProvider implements RateProvider {
     if (output.length === 0) {
       throw new Error("Awash Bank returned no valid USD rates.");
     }
+
+    console.log(
+      "[awash-output]",
+      output.map((rate) => ({
+        rateType: rate.rateType,
+        buy: rate.buy,
+        sell: rate.sell
+      }))
+    );
 
     return output;
   }

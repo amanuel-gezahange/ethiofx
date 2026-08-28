@@ -2,8 +2,7 @@ import * as cheerio from "cheerio";
 import type { FxRate } from "@/lib/types";
 import type { RateProvider } from "./provider";
 
-const SOURCE_URL =
-  "https://www.nibbanksc.com/exchange-rate/";
+const SOURCE_URL = "https://www.nibbanksc.com/exchange-rate/";
 
 function parseRate(value: string | undefined): number | null {
   if (!value) return null;
@@ -14,17 +13,8 @@ function parseRate(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validPair(
-  buy: number | null,
-  sell: number | null
-): buy is number {
-  return (
-    buy !== null &&
-    sell !== null &&
-    buy > 0 &&
-    sell > 0 &&
-    sell >= buy
-  );
+function validPair(buy: number | null, sell: number | null): buy is number {
+  return buy !== null && sell !== null && buy > 0 && sell > 0 && sell >= buy;
 }
 
 function normalizeText(value: string): string {
@@ -96,10 +86,7 @@ function extractEffectiveDate(html: string): string | null {
   return parsed.toISOString();
 }
 
-async function fetchWithRetry(
-  url: string,
-  attempts = 3
-): Promise<Response> {
+async function fetchWithRetry(url: string, attempts = 3): Promise<Response> {
   let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -135,9 +122,7 @@ async function fetchWithRetry(
     }
 
     if (attempt < attempts) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, attempt * 1000)
-      );
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
     }
   }
 
@@ -158,14 +143,11 @@ export class NibProvider implements RateProvider {
     const { buy, sell } = extractUsdRate(html);
 
     if (!validPair(buy, sell)) {
-      throw new Error(
-        "Nib International Bank returned no valid USD rate."
-      );
+      throw new Error("Nib International Bank returned no valid USD rate.");
     }
 
     const fetchedAt = new Date().toISOString();
-    const effectiveAt =
-      extractEffectiveDate(html) ?? fetchedAt;
+    const effectiveAt = extractEffectiveDate(html) ?? fetchedAt;
 
     return [
       {
@@ -176,7 +158,18 @@ export class NibProvider implements RateProvider {
         sell: sell!,
         rateType: "cash",
         sourceUrl: this.sourceUrl,
-        effectiveAt,
+        effectiveAt: fetchedAt,
+        fetchedAt
+      },
+      {
+        bank: this.name,
+        slug: this.slug,
+        currency: "USD",
+        buy,
+        sell: sell!,
+        rateType: "transaction",
+        sourceUrl: this.sourceUrl,
+        effectiveAt: fetchedAt,
         fetchedAt
       }
     ];
