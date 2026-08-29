@@ -23,6 +23,7 @@ import { gohProvider } from "@/providers/goh";
 import { saveProviderRates } from "@/lib/db/rates";
 import { env, hasSupabaseConfig } from "@/lib/env";
 import type { RateProvider } from "@/providers/provider";
+import { gadaaProvider } from "@/providers/gadaa";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -70,7 +71,8 @@ const providers: RateProvider[] = [
   addisProvider,
   globalProvider,
   oromiaProvider,
-  gohProvider
+  gohProvider,
+  gadaaProvider
 ];
 
 type IngestResult =
