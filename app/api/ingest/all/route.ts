@@ -17,6 +17,8 @@ import { enatProvider } from "@/providers/enat";
 import { berhanProvider } from "@/providers/berhan";
 import { addisProvider } from "@/providers/addis";
 import { globalProvider } from "@/providers/global";
+import { oromiaProvider } from "@/providers/oromia";
+import { gohProvider } from "@/providers/goh";
 
 import { saveProviderRates } from "@/lib/db/rates";
 import { env, hasSupabaseConfig } from "@/lib/env";
@@ -66,7 +68,9 @@ const providers: RateProvider[] = [
   enatProvider,
   berhanProvider,
   addisProvider,
-  globalProvider
+  globalProvider,
+  oromiaProvider,
+  gohProvider
 ];
 
 type IngestResult =
