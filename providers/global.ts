@@ -137,7 +137,7 @@ export class GlobalProvider
         sell: usd.sell,
         rateType: "cash",
         sourceUrl: this.sourceUrl,
-        effectiveAt: fetchedAt,
+        effectiveAt: null,
         fetchedAt
       },
       {
@@ -148,7 +148,7 @@ export class GlobalProvider
         sell: usd.sell,
         rateType: "transaction",
         sourceUrl: this.sourceUrl,
-        effectiveAt: fetchedAt,
+        effectiveAt: null,
         fetchedAt
       }
     ];

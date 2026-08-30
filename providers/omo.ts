@@ -3,7 +3,7 @@ import * as cheerio from "cheerio";
 import type { FxRate } from "@/lib/types";
 import type { RateProvider } from "./provider";
 
-const SOURCE_URL = "https://gadaabank.com.et/";
+const SOURCE_URL = "https://www.omobanksc.com/";
 
 function parseRate(value: string | undefined): number | null {
   if (!value) return null;
@@ -26,36 +26,35 @@ async function fetchPage(): Promise<string> {
       "Cache-Control": "no-cache",
       Pragma: "no-cache",
       "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/140.0.0.0 Safari/537.36"
     }
   });
 
   if (!response.ok) {
-    throw new Error(`Gadaa Bank returned HTTP ${response.status}`);
+    throw new Error(`Omo Bank returned HTTP ${response.status}`);
   }
 
   return response.text();
 }
 
-function extractUsdRate($: cheerio.CheerioAPI): {
-  cashBuy: number;
-  cashSell: number;
-  transactionBuy: number;
-  transactionSell: number;
+function extractUsdFromTable(
+  $: cheerio.CheerioAPI,
+  tableSelector: string
+): {
+  buy: number;
+  sell: number;
 } | null {
   let result: {
-    cashBuy: number;
-    cashSell: number;
-    transactionBuy: number;
-    transactionSell: number;
+    buy: number;
+    sell: number;
   } | null = null;
 
-  $("tr").each((_, row) => {
+  $(`${tableSelector} tbody tr`).each((_, row) => {
     if (result) return;
 
     const cells = $(row).find("td");
 
-    if (cells.length < 5) {
+    if (cells.length < 4) {
       return;
     }
 
@@ -63,53 +62,44 @@ function extractUsdRate($: cheerio.CheerioAPI): {
       .map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim())
       .get();
 
-    const currency = values[0]?.trim().toUpperCase();
+    const currency = values[1]?.replace(/\s+/g, " ").trim().toUpperCase();
 
-    if (currency !== "USD") {
+    if (!currency?.includes("USD") && !currency?.includes("US DOLLAR")) {
       return;
     }
 
-    const cashBuy = parseRate(values[1]);
+    const buy = parseRate(values[2]);
+    const sell = parseRate(values[3]);
 
-    const cashSell = parseRate(values[2]);
-
-    const transactionBuy = parseRate(values[3]);
-
-    const transactionSell = parseRate(values[4]);
-
-    if (
-      !validPair(cashBuy, cashSell) ||
-      !validPair(transactionBuy, transactionSell)
-    ) {
+    if (!validPair(buy, sell)) {
       return;
     }
 
     result = {
-      cashBuy,
-      cashSell: cashSell!,
-      transactionBuy,
-      transactionSell: transactionSell!
+      buy,
+      sell: sell!
     };
   });
 
   return result;
 }
 
-export class GadaaProvider implements RateProvider {
-  readonly name = "Gadaa Bank";
-  readonly slug = "gadaa";
+export class OmoProvider implements RateProvider {
+  readonly name = "Omo Bank";
+  readonly slug = "omo";
   readonly sourceUrl = SOURCE_URL;
 
   async fetchRates(): Promise<FxRate[]> {
     const html = await fetchPage();
-
     const $ = cheerio.load(html);
 
-    const usd = extractUsdRate($);
+    const cash = extractUsdFromTable($, "#tablepress-2");
 
-    if (!usd) {
+    const transaction = extractUsdFromTable($, "#tablepress-5");
+
+    if (!cash || !transaction) {
       throw new Error(
-        "Gadaa Bank page did not contain a valid USD exchange-rate row."
+        "Omo Bank page did not contain valid USD cash and transaction rows."
       );
     }
 
@@ -120,8 +110,8 @@ export class GadaaProvider implements RateProvider {
         bank: this.name,
         slug: this.slug,
         currency: "USD",
-        buy: usd.cashBuy,
-        sell: usd.cashSell,
+        buy: cash.buy,
+        sell: cash.sell,
         rateType: "cash",
         sourceUrl: this.sourceUrl,
         effectiveAt: null,
@@ -131,8 +121,8 @@ export class GadaaProvider implements RateProvider {
         bank: this.name,
         slug: this.slug,
         currency: "USD",
-        buy: usd.transactionBuy,
-        sell: usd.transactionSell,
+        buy: transaction.buy,
+        sell: transaction.sell,
         rateType: "transaction",
         sourceUrl: this.sourceUrl,
         effectiveAt: null,
@@ -141,7 +131,7 @@ export class GadaaProvider implements RateProvider {
     ];
 
     console.log(
-      "[gadaa-output]",
+      "[omo-output]",
       rates.map((rate) => ({
         rateType: rate.rateType,
         buy: rate.buy,
@@ -153,4 +143,4 @@ export class GadaaProvider implements RateProvider {
   }
 }
 
-export const gadaaProvider = new GadaaProvider();
+export const omoProvider = new OmoProvider();

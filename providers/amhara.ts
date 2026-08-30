@@ -132,7 +132,7 @@ export class AmharaProvider implements RateProvider {
     });
 
     const fetchedAt = new Date().toISOString();
-    const effectiveAt = fetchedAt;
+    const effectiveAt = null;
 
     const output: FxRate[] = [];
 

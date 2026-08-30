@@ -14,17 +14,8 @@ function parseRate(value: string | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validPair(
-  buy: number | null,
-  sell: number | null
-): buy is number {
-  return (
-    buy !== null &&
-    sell !== null &&
-    buy > 0 &&
-    sell > 0 &&
-    sell >= buy
-  );
+function validPair(buy: number | null, sell: number | null): buy is number {
+  return buy !== null && sell !== null && buy > 0 && sell > 0 && sell >= buy;
 }
 
 function extractUsdFromPanel(
@@ -90,10 +81,7 @@ function extractEffectiveDate(html: string): string | null {
   return parsed.toISOString();
 }
 
-async function fetchWithRetry(
-  url: string,
-  attempts = 3
-): Promise<Response> {
+async function fetchWithRetry(url: string, attempts = 3): Promise<Response> {
   let lastError: unknown = null;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -112,14 +100,10 @@ async function fetchWithRetry(
       }
 
       if (response.status >= 400 && response.status < 500) {
-        throw new Error(
-          `Zemen Bank returned HTTP ${response.status}`
-        );
+        throw new Error(`Zemen Bank returned HTTP ${response.status}`);
       }
 
-      lastError = new Error(
-        `Zemen Bank returned HTTP ${response.status}`
-      );
+      lastError = new Error(`Zemen Bank returned HTTP ${response.status}`);
     } catch (error) {
       lastError = error;
 
@@ -129,9 +113,7 @@ async function fetchWithRetry(
     }
 
     if (attempt < attempts) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, attempt * 1000)
-      );
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
     }
   }
 
@@ -153,8 +135,7 @@ export class ZemenProvider implements RateProvider {
     const cash = extractUsdFromPanel(html, "cash");
 
     const fetchedAt = new Date().toISOString();
-    const effectiveAt =
-      extractEffectiveDate(html) ?? fetchedAt;
+    const effectiveAt = extractEffectiveDate(html) ?? null;
 
     const output: FxRate[] = [];
 
@@ -187,9 +168,7 @@ export class ZemenProvider implements RateProvider {
     }
 
     if (output.length === 0) {
-      throw new Error(
-        "Zemen Bank returned no valid USD rates."
-      );
+      throw new Error("Zemen Bank returned no valid USD rates.");
     }
 
     return output;

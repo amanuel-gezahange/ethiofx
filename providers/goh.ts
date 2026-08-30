@@ -8,32 +8,20 @@ const SOURCE_URL = "https://www.gohbetbank.com/";
 function parseRate(value: string | undefined): number | null {
   if (!value) return null;
 
-  const parsed = Number.parseFloat(
-    value.replace(/,/g, "").trim()
-  );
+  const parsed = Number.parseFloat(value.replace(/,/g, "").trim());
 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validPair(
-  buy: number | null,
-  sell: number | null
-): buy is number {
-  return (
-    buy !== null &&
-    sell !== null &&
-    buy > 0 &&
-    sell > 0 &&
-    sell >= buy
-  );
+function validPair(buy: number | null, sell: number | null): buy is number {
+  return buy !== null && sell !== null && buy > 0 && sell > 0 && sell >= buy;
 }
 
 async function fetchPage(): Promise<string> {
   const response = await fetch(SOURCE_URL, {
     cache: "no-store",
     headers: {
-      Accept:
-        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
       "Cache-Control": "no-cache",
       Pragma: "no-cache",
@@ -43,17 +31,13 @@ async function fetchPage(): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(
-      `Goh Betoch Bank returned HTTP ${response.status}`
-    );
+    throw new Error(`Goh Betoch Bank returned HTTP ${response.status}`);
   }
 
   return response.text();
 }
 
-function extractFromTable(
-  $: cheerio.CheerioAPI
-): {
+function extractFromTable($: cheerio.CheerioAPI): {
   buy: number;
   sell: number;
 } | null {
@@ -65,10 +49,7 @@ function extractFromTable(
   $("tr").each((_, row) => {
     if (result) return;
 
-    const rowText = $(row)
-      .text()
-      .replace(/\s+/g, " ")
-      .trim();
+    const rowText = $(row).text().replace(/\s+/g, " ").trim();
 
     if (!/\bUSD\b/i.test(rowText)) {
       return;
@@ -77,12 +58,7 @@ function extractFromTable(
     const cells = $(row).find("td");
 
     const values = cells
-      .map((__, cell) =>
-        $(cell)
-          .text()
-          .replace(/\s+/g, " ")
-          .trim()
-      )
+      .map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim())
       .get();
 
     console.log("[goh-debug-row]", values);
@@ -105,10 +81,7 @@ function extractFromTable(
     const numericValues = values
       .slice(1)
       .map((value) => parseRate(value))
-      .filter(
-        (value): value is number =>
-          value !== null && value > 10
-      );
+      .filter((value): value is number => value !== null && value > 10);
 
     if (numericValues.length < 2) {
       return;
@@ -130,9 +103,7 @@ function extractFromTable(
   return result;
 }
 
-function extractFromRawHtml(
-  html: string
-): {
+function extractFromRawHtml(html: string): {
   buy: number;
   sell: number;
 } | null {
@@ -145,51 +116,29 @@ function extractFromRawHtml(
       USD -> buying -> selling
   */
 
-  const usdIndex = html.search(
-    /<strong[^>]*>\s*USD\s*<\/strong>/i
-  );
+  const usdIndex = html.search(/<strong[^>]*>\s*USD\s*<\/strong>/i);
 
   if (usdIndex < 0) {
     return null;
   }
 
-  const section = html.slice(
-    usdIndex,
-    usdIndex + 2500
-  );
+  const section = html.slice(usdIndex, usdIndex + 2500);
 
-  const text = cheerio
-    .load(section)
-    .text()
-    .replace(/\s+/g, " ")
-    .trim();
+  const text = cheerio.load(section).text().replace(/\s+/g, " ").trim();
 
-  const usdPosition = text
-    .toUpperCase()
-    .indexOf("USD");
+  const usdPosition = text.toUpperCase().indexOf("USD");
 
   if (usdPosition < 0) {
     return null;
   }
 
-  const afterUsd = text.slice(
-    usdPosition + 3
-  );
+  const afterUsd = text.slice(usdPosition + 3);
 
-  const numbers =
-    afterUsd.match(
-      /\d{2,3}(?:\.\d+)?/g
-    ) ?? [];
+  const numbers = afterUsd.match(/\d{2,3}(?:\.\d+)?/g) ?? [];
 
   const rates = numbers
-    .map((value) =>
-      parseRate(value)
-    )
-    .filter(
-      (value): value is number =>
-        value !== null &&
-        value > 10
-    );
+    .map((value) => parseRate(value))
+    .filter((value): value is number => value !== null && value > 10);
 
   if (rates.length < 2) {
     return null;
@@ -208,45 +157,28 @@ function extractFromRawHtml(
   };
 }
 
-export class GohProvider
-  implements RateProvider
-{
-  readonly name =
-    "Goh Betoch Bank";
+export class GohProvider implements RateProvider {
+  readonly name = "Goh Betoch Bank";
 
-  readonly slug =
-    "goh";
+  readonly slug = "goh";
 
-  readonly sourceUrl =
-    SOURCE_URL;
+  readonly sourceUrl = SOURCE_URL;
 
   async fetchRates(): Promise<FxRate[]> {
-    const html =
-      await fetchPage();
+    const html = await fetchPage();
 
-    const $ =
-      cheerio.load(html);
+    const $ = cheerio.load(html);
 
-    const fromTable =
-      extractFromTable($);
+    const fromTable = extractFromTable($);
 
-    const fromRawHtml =
-      fromTable
-        ? null
-        : extractFromRawHtml(
-            html
-          );
+    const fromRawHtml = fromTable ? null : extractFromRawHtml(html);
 
-    const usd =
-      fromTable ??
-      fromRawHtml;
+    const usd = fromTable ?? fromRawHtml;
 
     console.log("[goh-debug]", {
       htmlLength: html.length,
-      foundTable:
-        Boolean(fromTable),
-      foundRawHtml:
-        Boolean(fromRawHtml)
+      foundTable: Boolean(fromTable),
+      foundRawHtml: Boolean(fromRawHtml)
     });
 
     if (!usd) {
@@ -255,8 +187,7 @@ export class GohProvider
       );
     }
 
-    const fetchedAt =
-      new Date().toISOString();
+    const fetchedAt = new Date().toISOString();
 
     const rates: FxRate[] = [
       {
@@ -266,10 +197,8 @@ export class GohProvider
         buy: usd.buy,
         sell: usd.sell,
         rateType: "cash",
-        sourceUrl:
-          this.sourceUrl,
-        effectiveAt:
-          fetchedAt,
+        sourceUrl: this.sourceUrl,
+        effectiveAt: null,
         fetchedAt
       },
       {
@@ -278,12 +207,9 @@ export class GohProvider
         currency: "USD",
         buy: usd.buy,
         sell: usd.sell,
-        rateType:
-          "transaction",
-        sourceUrl:
-          this.sourceUrl,
-        effectiveAt:
-          fetchedAt,
+        rateType: "transaction",
+        sourceUrl: this.sourceUrl,
+        effectiveAt: null,
         fetchedAt
       }
     ];
@@ -291,8 +217,7 @@ export class GohProvider
     console.log(
       "[goh-output]",
       rates.map((rate) => ({
-        rateType:
-          rate.rateType,
+        rateType: rate.rateType,
         buy: rate.buy,
         sell: rate.sell
       }))
@@ -302,5 +227,4 @@ export class GohProvider
   }
 }
 
-export const gohProvider =
-  new GohProvider();
+export const gohProvider = new GohProvider();

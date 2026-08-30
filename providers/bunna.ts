@@ -155,7 +155,7 @@ export class BunnaProvider implements RateProvider {
 
     // Bunna's visible page does not currently expose a clear
     // machine-readable effective date, so use fetch time.
-    const effectiveAt = fetchedAt;
+    const effectiveAt = null;
 
     const output: FxRate[] = [];
 

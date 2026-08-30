@@ -6,8 +6,22 @@ type BankRow = {
   slug: string;
 };
 
+type SavedRateRow = {
+  bank_id: string;
+  currency: string;
+  rate_type: string;
+  buy: number;
+  sell: number;
+  effective_at: string | null;
+};
+
 export async function saveProviderRates(rates: FxRate[]) {
-  if (rates.length === 0) return { inserted: 0 };
+  if (rates.length === 0) {
+    return {
+      inserted: 0,
+      skipped: 0
+    };
+  }
 
   const supabase = getSupabaseAdmin();
   const bank = rates[0];
@@ -27,7 +41,9 @@ export async function saveProviderRates(rates: FxRate[]) {
     .single<BankRow>();
 
   if (bankError || !bankRow) {
-    throw new Error(`Could not upsert bank: ${bankError?.message ?? "unknown error"}`);
+    throw new Error(
+      `Could not upsert bank: ${bankError?.message ?? "unknown error"}`
+    );
   }
 
   const rows = rates.map((rate) => ({
@@ -41,13 +57,26 @@ export async function saveProviderRates(rates: FxRate[]) {
     fetched_at: rate.fetchedAt
   }));
 
-  const { error } = await supabase.from("fx_rates").insert(rows);
+  const { data, error } = await supabase
+    .from("fx_rates")
+    .upsert(rows, {
+      onConflict: "bank_id,currency,rate_type,buy,sell,effective_at",
+      ignoreDuplicates: true
+    })
+    .select("bank_id,currency,rate_type,buy,sell,effective_at")
+    .returns<SavedRateRow[]>();
 
   if (error) {
-    throw new Error(`Could not insert FX rates: ${error.message}`);
+    throw new Error(`Could not save FX rates: ${error.message}`);
   }
 
-  return { inserted: rows.length };
+  const inserted = data?.length ?? 0;
+  const skipped = rows.length - inserted;
+
+  return {
+    inserted,
+    skipped
+  };
 }
 
 export async function getLatestRates(

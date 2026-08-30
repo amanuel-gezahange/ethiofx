@@ -24,6 +24,18 @@ import { saveProviderRates } from "@/lib/db/rates";
 import { env, hasSupabaseConfig } from "@/lib/env";
 import type { RateProvider } from "@/providers/provider";
 import { gadaaProvider } from "@/providers/gadaa";
+import { hijraProvider } from "@/providers/hijra";
+import { zamzamProvider } from "@/providers/zamzam";
+import { siinqeeProvider } from "@/providers/siinqee";
+import { tsedeyProvider } from "@/providers/tsedey";
+import { sidamaProvider } from "@/providers/sidama";
+import { shabelleProvider } from "@/providers/shabelle";
+import { rammisProvider } from "@/providers/rammis";
+import { siketProvider } from "@/providers/siket";
+import { omoProvider } from "@/providers/omo";
+import { dbeProvider } from "@/providers/dbe";
+import { ahaduProvider } from "@/providers/ahadu";
+import { lionProvider } from "@/providers/lion";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,12 +52,10 @@ function isAuthorized(req: NextRequest) {
   const auth = req.headers.get("authorization");
 
   const ingestAuthorized =
-    Boolean(env.INGEST_SECRET) &&
-    auth === `Bearer ${env.INGEST_SECRET}`;
+    Boolean(env.INGEST_SECRET) && auth === `Bearer ${env.INGEST_SECRET}`;
 
   const cronAuthorized =
-    Boolean(env.CRON_SECRET) &&
-    auth === `Bearer ${env.CRON_SECRET}`;
+    Boolean(env.CRON_SECRET) && auth === `Bearer ${env.CRON_SECRET}`;
 
   return ingestAuthorized || cronAuthorized;
 }
@@ -72,7 +82,19 @@ const providers: RateProvider[] = [
   globalProvider,
   oromiaProvider,
   gohProvider,
-  gadaaProvider
+  gadaaProvider,
+  hijraProvider,
+  zamzamProvider,
+  siinqeeProvider,
+  tsedeyProvider,
+  sidamaProvider,
+  shabelleProvider,
+  rammisProvider,
+  siketProvider,
+  omoProvider,
+  dbeProvider,
+  ahaduProvider,
+  lionProvider
 ];
 
 type IngestResult =
@@ -90,10 +112,7 @@ type IngestResult =
 
 async function ingest(req: NextRequest) {
   if (!isAuthorized(req)) {
-    return NextResponse.json(
-      { error: "Unauthorized" },
-      { status: 401 }
-    );
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   if (!hasSupabaseConfig()) {
@@ -123,9 +142,7 @@ async function ingest(req: NextRequest) {
       });
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Unknown provider error";
+        error instanceof Error ? error.message : "Unknown provider error";
 
       console.error(`[ingest:${provider.slug}]`, error);
 
@@ -137,9 +154,7 @@ async function ingest(req: NextRequest) {
     }
   }
 
-  const successful = results.filter(
-    (item) => item.success
-  ).length;
+  const successful = results.filter((item) => item.success).length;
 
   const failed = results.length - successful;
 

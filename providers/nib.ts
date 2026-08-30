@@ -147,7 +147,7 @@ export class NibProvider implements RateProvider {
     }
 
     const fetchedAt = new Date().toISOString();
-    const effectiveAt = extractEffectiveDate(html) ?? fetchedAt;
+    const effectiveAt = extractEffectiveDate(html) ?? null;
 
     return [
       {
@@ -158,7 +158,7 @@ export class NibProvider implements RateProvider {
         sell: sell!,
         rateType: "cash",
         sourceUrl: this.sourceUrl,
-        effectiveAt: fetchedAt,
+        effectiveAt,
         fetchedAt
       },
       {
@@ -169,7 +169,7 @@ export class NibProvider implements RateProvider {
         sell: sell!,
         rateType: "transaction",
         sourceUrl: this.sourceUrl,
-        effectiveAt: fetchedAt,
+        effectiveAt,
         fetchedAt
       }
     ];

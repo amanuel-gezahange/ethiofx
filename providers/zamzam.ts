@@ -3,25 +3,37 @@ import * as cheerio from "cheerio";
 import type { FxRate } from "@/lib/types";
 import type { RateProvider } from "./provider";
 
-const SOURCE_URL = "https://gadaabank.com.et/";
+const SOURCE_URL = "https://zamzambank.com/exchange-rates/";
 
 function parseRate(value: string | undefined): number | null {
   if (!value) return null;
 
-  const parsed = Number.parseFloat(value.replace(/,/g, "").trim());
+  const parsed = Number.parseFloat(
+    value.replace(/,/g, "").trim()
+  );
 
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function validPair(buy: number | null, sell: number | null): buy is number {
-  return buy !== null && sell !== null && buy > 0 && sell > 0 && sell >= buy;
+function validPair(
+  buy: number | null,
+  sell: number | null
+): buy is number {
+  return (
+    buy !== null &&
+    sell !== null &&
+    buy > 0 &&
+    sell > 0 &&
+    sell >= buy
+  );
 }
 
 async function fetchPage(): Promise<string> {
   const response = await fetch(SOURCE_URL, {
     cache: "no-store",
     headers: {
-      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      Accept:
+        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-US,en;q=0.9",
       "Cache-Control": "no-cache",
       Pragma: "no-cache",
@@ -31,13 +43,17 @@ async function fetchPage(): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Gadaa Bank returned HTTP ${response.status}`);
+    throw new Error(
+      `ZamZam Bank returned HTTP ${response.status}`
+    );
   }
 
   return response.text();
 }
 
-function extractUsdRate($: cheerio.CheerioAPI): {
+function extractUsdRate(
+  $: cheerio.CheerioAPI
+): {
   cashBuy: number;
   cashSell: number;
   transactionBuy: number;
@@ -60,21 +76,30 @@ function extractUsdRate($: cheerio.CheerioAPI): {
     }
 
     const values = cells
-      .map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim())
+      .map((__, cell) =>
+        $(cell)
+          .text()
+          .replace(/\s+/g, " ")
+          .trim()
+      )
       .get();
 
-    const currency = values[0]?.trim().toUpperCase();
+    const currency = values[0]
+      ?.replace(/\u2013/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toUpperCase();
 
-    if (currency !== "USD") {
+    if (
+      !currency?.includes("USD") &&
+      !currency?.includes("US DOLLAR")
+    ) {
       return;
     }
 
     const cashBuy = parseRate(values[1]);
-
     const cashSell = parseRate(values[2]);
-
     const transactionBuy = parseRate(values[3]);
-
     const transactionSell = parseRate(values[4]);
 
     if (
@@ -95,21 +120,20 @@ function extractUsdRate($: cheerio.CheerioAPI): {
   return result;
 }
 
-export class GadaaProvider implements RateProvider {
-  readonly name = "Gadaa Bank";
-  readonly slug = "gadaa";
+export class ZamZamProvider implements RateProvider {
+  readonly name = "ZamZam Bank";
+  readonly slug = "zamzam";
   readonly sourceUrl = SOURCE_URL;
 
   async fetchRates(): Promise<FxRate[]> {
     const html = await fetchPage();
-
     const $ = cheerio.load(html);
 
     const usd = extractUsdRate($);
 
     if (!usd) {
       throw new Error(
-        "Gadaa Bank page did not contain a valid USD exchange-rate row."
+        "ZamZam Bank page did not contain a valid USD exchange-rate row."
       );
     }
 
@@ -141,7 +165,7 @@ export class GadaaProvider implements RateProvider {
     ];
 
     console.log(
-      "[gadaa-output]",
+      "[zamzam-output]",
       rates.map((rate) => ({
         rateType: rate.rateType,
         buy: rate.buy,
@@ -153,4 +177,4 @@ export class GadaaProvider implements RateProvider {
   }
 }
 
-export const gadaaProvider = new GadaaProvider();
+export const zamzamProvider = new ZamZamProvider();

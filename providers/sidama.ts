@@ -3,7 +3,7 @@ import * as cheerio from "cheerio";
 import type { FxRate } from "@/lib/types";
 import type { RateProvider } from "./provider";
 
-const SOURCE_URL = "https://gadaabank.com.et/";
+const SOURCE_URL = "https://sidamabanksc.com/exchange-rate/";
 
 function parseRate(value: string | undefined): number | null {
   if (!value) return null;
@@ -15,6 +15,18 @@ function parseRate(value: string | undefined): number | null {
 
 function validPair(buy: number | null, sell: number | null): buy is number {
   return buy !== null && sell !== null && buy > 0 && sell > 0 && sell >= buy;
+}
+
+function parseEffectiveDate(value: string | null): string | null {
+  if (!value) return null;
+
+  const parsed = new Date(`${value} 00:00:00 GMT+0300`);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null;
+  }
+
+  return parsed.toISOString();
 }
 
 async function fetchPage(): Promise<string> {
@@ -31,10 +43,16 @@ async function fetchPage(): Promise<string> {
   });
 
   if (!response.ok) {
-    throw new Error(`Gadaa Bank returned HTTP ${response.status}`);
+    throw new Error(`Sidama Bank returned HTTP ${response.status}`);
   }
 
   return response.text();
+}
+
+function extractEffectiveDate(html: string): string | null {
+  const match = html.match(/Daily Rates[\s\S]*?([A-Z][a-z]+ \d{1,2}, \d{4})/i);
+
+  return match?.[1] ?? null;
 }
 
 function extractUsdRate($: cheerio.CheerioAPI): {
@@ -50,32 +68,32 @@ function extractUsdRate($: cheerio.CheerioAPI): {
     transactionSell: number;
   } | null = null;
 
-  $("tr").each((_, row) => {
+  $(".ser-card").each((_, card) => {
     if (result) return;
 
-    const cells = $(row).find("td");
+    const text = $(card).text().replace(/\s+/g, " ").trim();
 
-    if (cells.length < 5) {
+    if (!/\bUSD\b/i.test(text) && !/United States Dollar/i.test(text)) {
       return;
     }
 
-    const values = cells
-      .map((__, cell) => $(cell).text().replace(/\s+/g, " ").trim())
-      .get();
+    const cashBuyMatch = text.match(/Cash Buying\s*([\d.]+)/i);
 
-    const currency = values[0]?.trim().toUpperCase();
+    const cashSellMatch = text.match(/Cash Selling\s*([\d.]+)/i);
 
-    if (currency !== "USD") {
-      return;
-    }
+    const transactionBuyMatch = text.match(/Transactional Buying\s*([\d.]+)/i);
 
-    const cashBuy = parseRate(values[1]);
+    const transactionSellMatch = text.match(
+      /Transactional Selling\s*([\d.]+)/i
+    );
 
-    const cashSell = parseRate(values[2]);
+    const cashBuy = parseRate(cashBuyMatch?.[1]);
 
-    const transactionBuy = parseRate(values[3]);
+    const cashSell = parseRate(cashSellMatch?.[1]);
 
-    const transactionSell = parseRate(values[4]);
+    const transactionBuy = parseRate(transactionBuyMatch?.[1]);
+
+    const transactionSell = parseRate(transactionSellMatch?.[1]);
 
     if (
       !validPair(cashBuy, cashSell) ||
@@ -95,25 +113,28 @@ function extractUsdRate($: cheerio.CheerioAPI): {
   return result;
 }
 
-export class GadaaProvider implements RateProvider {
-  readonly name = "Gadaa Bank";
-  readonly slug = "gadaa";
+export class SidamaProvider implements RateProvider {
+  readonly name = "Sidama Bank";
+  readonly slug = "sidama";
   readonly sourceUrl = SOURCE_URL;
 
   async fetchRates(): Promise<FxRate[]> {
     const html = await fetchPage();
-
     const $ = cheerio.load(html);
 
     const usd = extractUsdRate($);
 
     if (!usd) {
       throw new Error(
-        "Gadaa Bank page did not contain a valid USD exchange-rate row."
+        "Sidama Bank page did not contain a valid USD exchange-rate card."
       );
     }
 
     const fetchedAt = new Date().toISOString();
+
+    const sourceDate = extractEffectiveDate(html);
+
+    const effectiveAt = parseEffectiveDate(sourceDate) ?? fetchedAt;
 
     const rates: FxRate[] = [
       {
@@ -124,7 +145,7 @@ export class GadaaProvider implements RateProvider {
         sell: usd.cashSell,
         rateType: "cash",
         sourceUrl: this.sourceUrl,
-        effectiveAt: null,
+        effectiveAt,
         fetchedAt
       },
       {
@@ -135,22 +156,23 @@ export class GadaaProvider implements RateProvider {
         sell: usd.transactionSell,
         rateType: "transaction",
         sourceUrl: this.sourceUrl,
-        effectiveAt: null,
+        effectiveAt,
         fetchedAt
       }
     ];
 
-    console.log(
-      "[gadaa-output]",
-      rates.map((rate) => ({
+    console.log("[sidama-output]", {
+      sourceDate,
+      rates: rates.map((rate) => ({
         rateType: rate.rateType,
         buy: rate.buy,
-        sell: rate.sell
+        sell: rate.sell,
+        effectiveAt: rate.effectiveAt
       }))
-    );
+    });
 
     return rates;
   }
 }
 
-export const gadaaProvider = new GadaaProvider();
+export const sidamaProvider = new SidamaProvider();
