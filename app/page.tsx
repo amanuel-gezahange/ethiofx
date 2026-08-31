@@ -318,106 +318,52 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="terminalPanel">
-        <div className="terminalToolbar">
-          <div className="toolbarGroup">
-            <div className="segmented terminalSegmented">
-              <button
-                className={
-                  intent === "sell-foreign"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setIntent("sell-foreign")
-                }
-              >
-                Selling USD
-              </button>
+      <section className="decisionPanel">
+        <div className="decisionTopbar">
+          <div className="decisionContext">
+            <span className="decisionKicker">USD / ETB DECISION DESK</span>
+            <strong>
+              {isForex ? "Independent Forex Market" : "Bank FX Market"}
+            </strong>
+            <small>
+              Compare the financial outcome before choosing an institution.
+            </small>
+          </div>
 
+          <div className="compactControls">
+            <div className="miniToggle">
               <button
-                className={
-                  intent === "buy-foreign"
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  setIntent("buy-foreign")
-                }
+                className={intent === "sell-foreign" ? "active" : ""}
+                onClick={() => setIntent("sell-foreign")}
               >
-                Buying USD
+                Sell USD
+              </button>
+              <button
+                className={intent === "buy-foreign" ? "active" : ""}
+                onClick={() => setIntent("buy-foreign")}
+              >
+                Buy USD
               </button>
             </div>
 
             {!isForex ? (
-              <div className="segmented compact terminalSegmented">
+              <div className="miniToggle">
                 <button
-                  className={
-                    rateType === "transaction"
-                      ? "active"
-                      : ""
-                  }
-                  onClick={() =>
-                    setRateType("transaction")
-                  }
+                  className={rateType === "transaction" ? "active" : ""}
+                  onClick={() => setRateType("transaction")}
                 >
                   Transaction
                 </button>
-
                 <button
-                  className={
-                    rateType === "cash"
-                      ? "active"
-                      : ""
-                  }
-                  onClick={() =>
-                    setRateType("cash")
-                  }
+                  className={rateType === "cash" ? "active" : ""}
+                  onClick={() => setRateType("cash")}
                 >
                   Cash
                 </button>
               </div>
             ) : (
-              <div className="terminalBadge">CASH MARKET</div>
+              <span className="compactMarketBadge">Cash market</span>
             )}
-          </div>
-
-          <div className="toolbarInputs">
-            <label className="terminalField amountTerminal">
-              <span>AMOUNT</span>
-              <div>
-                <b>$</b>
-                <input
-                  type="number"
-                  min={0}
-                  value={amount}
-                  onChange={(e) =>
-                    setAmount(
-                      Math.max(
-                        0,
-                        Number(e.target.value)
-                      )
-                    )
-                  }
-                />
-                <strong>USD</strong>
-              </div>
-            </label>
-
-            <label className="terminalField searchTerminal">
-              <span>SEARCH</span>
-              <input
-                placeholder={
-                  isForex
-                    ? "Search forex bureau"
-                    : "Search bank"
-                }
-                value={query}
-                onChange={(e) =>
-                  setQuery(e.target.value)
-                }
-              />
-            </label>
           </div>
         </div>
 
@@ -428,97 +374,148 @@ export default function Home() {
           </div>
         )}
 
-        <div className="metricGrid">
-          <div className="metricCard accent">
-            <span>BEST BUY</span>
-            <strong>
-              {currentVisible.length
-                ? rateNumber.format(
-                  Math.max(...currentVisible.map((r) => r.buy))
-                )
-                : "—"}
-            </strong>
-            <small>
-              {currentVisible
-                .slice()
-                .sort((a, b) => b.buy - a.buy)[0]?.bank ?? "No live quote"}
-            </small>
+        <div className="decisionBody">
+          <div className="amountDecision">
+            <span className="decisionLabel">AMOUNT TO COMPARE</span>
+
+            <div className="businessAmount">
+              <span>$</span>
+              <input
+                aria-label="USD amount to compare"
+                type="number"
+                min={0}
+                value={amount}
+                onChange={(e) =>
+                  setAmount(Math.max(0, Number(e.target.value)))
+                }
+              />
+              <b>USD</b>
+            </div>
+
+            <div className="amountPresets">
+              {[10000, 50000, 100000, 250000, 500000].map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={amount === value ? "active" : ""}
+                  onClick={() => setAmount(value)}
+                >
+                  ${value >= 1000 ? `${value / 1000}K` : value}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="metricCard">
-            <span>BEST SELL</span>
-            <strong>
-              {currentVisible.length
-                ? rateNumber.format(
-                  Math.min(...currentVisible.map((r) => r.sell))
-                )
-                : "—"}
-            </strong>
-            <small>
-              {currentVisible
-                .slice()
-                .sort((a, b) => a.sell - b.sell)[0]?.bank ?? "No live quote"}
-            </small>
-          </div>
+          <div className="businessOutcome">
+            <div className="outcomeHeader">
+              <span className="decisionLabel">
+                {intent === "sell-foreign"
+                  ? "BEST OUTCOME FOR YOUR USD"
+                  : "LOWEST COST FOR YOUR USD"}
+              </span>
 
-          <div className="metricCard">
-            <span>AVG BUY</span>
-            <strong>
-              {currentVisible.length
-                ? rateNumber.format(
-                  currentVisible.reduce((sum, r) => sum + r.buy, 0) /
-                  currentVisible.length
-                )
-                : "—"}
-            </strong>
-            <small>Market average</small>
-          </div>
+              <span className="liveDecision">
+                <i />
+                {loading ? "SYNCING" : `${currentCount} LIVE`}
+              </span>
+            </div>
 
-          <div className="metricCard">
-            <span>MARKET STATUS</span>
-            <strong>{loading ? "SYNC" : `${currentCount} LIVE`}</strong>
-            <small>
-              {cachedCount
-                ? `${cachedCount} cached quote${cachedCount === 1 ? "" : "s"}`
-                : "All displayed quotes current"}
-            </small>
+            {best ? (
+              <>
+                <div className="outcomeInstitution">
+                  <div>
+                    <span className="outcomeRank">#1</span>
+                    <strong>{best.bank}</strong>
+                  </div>
+                  <small>Updated {relativeTime(best.fetchedAt)}</small>
+                </div>
+
+                <div className="outcomeMoney">
+                  <strong>{money.format(bestTotal)} ETB</strong>
+                  <span>
+                    at {rateNumber.format(
+                      intent === "sell-foreign" ? best.buy : best.sell
+                    )} ETB / USD
+                  </span>
+                </div>
+
+                {currentVisible.length > 0 && (() => {
+                  const averageRate =
+                    currentVisible.reduce(
+                      (sum, rate) =>
+                        sum +
+                        (intent === "sell-foreign" ? rate.buy : rate.sell),
+                      0
+                    ) / currentVisible.length;
+
+                  const averageTotal = amount * averageRate;
+                  const difference =
+                    intent === "sell-foreign"
+                      ? bestTotal - averageTotal
+                      : averageTotal - bestTotal;
+
+                  return (
+                    <div className="savingsCallout">
+                      <span>
+                        {intent === "sell-foreign"
+                          ? "MORE THAN MARKET AVERAGE"
+                          : "LESS THAN MARKET AVERAGE"}
+                      </span>
+                      <strong>
+                        {money.format(Math.max(0, difference))} ETB
+                      </strong>
+                    </div>
+                  );
+                })()}
+              </>
+            ) : (
+              <div className="emptyOutcome">
+                {loading ? "Finding the best live quote…" : "No live quote available."}
+              </div>
+            )}
           </div>
         </div>
 
-        {best && (
-          <div className="bestStrip">
-            <div className="bestStripLeft">
-              <span className="bestStripLabel">TOP QUOTE</span>
-              <strong>{best.bank}</strong>
-              <small>
-                Updated {relativeTime(best.fetchedAt)}
-              </small>
-            </div>
+        <div className="decisionFooter">
+          <div className="marketFacts">
+            <span>
+              <b>
+                {currentVisible.length
+                  ? rateNumber.format(
+                    currentVisible.reduce(
+                      (sum, r) =>
+                        sum +
+                        (intent === "sell-foreign" ? r.buy : r.sell),
+                      0
+                    ) / currentVisible.length
+                  )
+                  : "—"}
+              </b>
+              Market avg
+            </span>
 
-            <div className="bestStripRate">
-              <span>
-                {intent === "sell-foreign" ? "BUY" : "SELL"}
-              </span>
-              <strong>
-                {rateNumber.format(
-                  intent === "sell-foreign"
-                    ? best.buy
-                    : best.sell
-                )}
-              </strong>
-              <small>ETB / USD</small>
-            </div>
+            <span>
+              <b>{currentCount}</b>
+              Live providers
+            </span>
 
-            <div className="bestStripValue">
-              <span>
-                {intent === "sell-foreign"
-                  ? "YOU RECEIVE"
-                  : "YOU PAY"}
-              </span>
-              <strong>{money.format(bestTotal)} ETB</strong>
-            </div>
+            <span>
+              <b>{cachedCount}</b>
+              Cached
+            </span>
           </div>
-        )}
+
+          <label className="decisionSearch">
+            <span>⌕</span>
+            <input
+              placeholder={
+                isForex ? "Search forex bureau" : "Search institution"
+              }
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+          </label>
+        </div>
       </section>
 
       <section className="resultsSection marketResults">

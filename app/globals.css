@@ -1930,3 +1930,466 @@ footer {
     flex: 1;
   }
 }
+
+/* ==========================================
+   Business outcome decision panel
+   ========================================== */
+
+.decisionPanel {
+  margin-top: 18px;
+  overflow: hidden;
+  border: 1px solid #26313b;
+  border-radius: 20px;
+  background: radial-gradient(
+      circle at 88% 0%,
+      rgba(44, 209, 126, 0.07),
+      transparent 28%
+    ),
+    #0c1218;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.22);
+}
+
+.decisionTopbar {
+  min-height: 86px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 22px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.decisionContext {
+  display: grid;
+  gap: 3px;
+}
+
+.decisionKicker,
+.decisionLabel {
+  color: #7790a4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.11em;
+}
+
+.decisionContext strong {
+  color: #f6f9fb;
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+
+.decisionContext small {
+  color: #71808e;
+  font-size: 11px;
+}
+
+.compactControls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.miniToggle {
+  display: flex;
+  padding: 3px;
+  border: 1px solid #29343f;
+  border-radius: 10px;
+  background: #111820;
+}
+
+.miniToggle button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  padding: 0 12px;
+  background: transparent;
+  color: #8292a1;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.miniToggle button.active {
+  background: #eaf0f4;
+  color: #0a0f14;
+}
+
+.compactMarketBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 11px;
+  border: 1px solid rgba(44, 209, 126, 0.18);
+  border-radius: 9px;
+  background: rgba(44, 209, 126, 0.06);
+  color: #50d98d;
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.decisionBody {
+  display: grid;
+  grid-template-columns: minmax(300px, 0.8fr) minmax(460px, 1.2fr);
+}
+
+.amountDecision,
+.businessOutcome {
+  padding: 28px;
+}
+
+.amountDecision {
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.businessAmount {
+  margin-top: 12px;
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 0 18px;
+  border: 1px solid #2a3742;
+  border-radius: 14px;
+  background: #101820;
+}
+
+.businessAmount span,
+.businessAmount b {
+  color: #80909f;
+  font-size: 14px;
+}
+
+.businessAmount input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #f7fafc;
+  font-size: clamp(25px, 3vw, 36px);
+  font-weight: 850;
+  letter-spacing: -0.045em;
+  font-variant-numeric: tabular-nums;
+}
+
+.businessAmount:focus-within {
+  border-color: rgba(44, 209, 126, 0.5);
+  box-shadow: 0 0 0 3px rgba(44, 209, 126, 0.07);
+}
+
+.amountPresets {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.amountPresets::-webkit-scrollbar {
+  display: none;
+}
+
+.amountPresets button {
+  min-height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid #26323d;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #111820;
+  color: #82909c;
+  font-size: 10px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.amountPresets button:hover,
+.amountPresets button.active {
+  border-color: rgba(44, 209, 126, 0.35);
+  background: rgba(44, 209, 126, 0.07);
+  color: #5ce09a;
+}
+
+.businessOutcome {
+  position: relative;
+  background: linear-gradient(
+    110deg,
+    rgba(44, 209, 126, 0.045),
+    transparent 55%
+  );
+}
+
+.outcomeHeader,
+.outcomeInstitution,
+.decisionFooter,
+.marketFacts,
+.decisionSearch {
+  display: flex;
+  align-items: center;
+}
+
+.outcomeHeader,
+.outcomeInstitution,
+.decisionFooter {
+  justify-content: space-between;
+}
+
+.liveDecision {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #738493;
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.liveDecision i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #2cd17e;
+  box-shadow: 0 0 10px rgba(44, 209, 126, 0.6);
+}
+
+.outcomeInstitution {
+  gap: 14px;
+  margin-top: 19px;
+}
+
+.outcomeInstitution > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.outcomeInstitution strong {
+  color: #f6f9fb;
+  font-size: 18px;
+  letter-spacing: -0.025em;
+}
+
+.outcomeInstitution small {
+  color: #6f7d89;
+  font-size: 10px;
+}
+
+.outcomeRank {
+  display: inline-grid;
+  place-items: center;
+  min-width: 27px;
+  height: 24px;
+  border: 1px solid rgba(44, 209, 126, 0.2);
+  border-radius: 7px;
+  background: rgba(44, 209, 126, 0.07);
+  color: #48d98a;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.outcomeMoney {
+  margin-top: 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.outcomeMoney strong {
+  color: #35d884;
+  font-size: clamp(34px, 4.3vw, 58px);
+  line-height: 1;
+  letter-spacing: -0.055em;
+  font-variant-numeric: tabular-nums;
+}
+
+.outcomeMoney span {
+  color: #83929f;
+  font-size: 11px;
+}
+
+.savingsCallout {
+  margin-top: 19px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid rgba(44, 209, 126, 0.17);
+  border-radius: 9px;
+  background: rgba(44, 209, 126, 0.055);
+}
+
+.savingsCallout span {
+  color: #728795;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.savingsCallout strong {
+  color: #5ee09b;
+  font-size: 13px;
+}
+
+.emptyOutcome {
+  margin-top: 26px;
+  color: #788794;
+  font-size: 14px;
+}
+
+.decisionFooter {
+  gap: 18px;
+  padding: 13px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.marketFacts {
+  min-width: 0;
+  gap: 24px;
+}
+
+.marketFacts span {
+  display: grid;
+  gap: 2px;
+  color: #687784;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.marketFacts b {
+  color: #dce3e8;
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.decisionSearch {
+  width: min(280px, 100%);
+  margin-left: auto;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 11px;
+  border: 1px solid #26323c;
+  border-radius: 9px;
+  background: #0f161d;
+}
+
+.decisionSearch span {
+  color: #647481;
+}
+
+.decisionSearch input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #dfe6eb;
+  font-size: 11px;
+}
+
+@media (max-width: 860px) {
+  .decisionTopbar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 13px;
+  }
+
+  .compactControls {
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .compactControls::-webkit-scrollbar {
+    display: none;
+  }
+
+  .decisionBody {
+    grid-template-columns: 1fr;
+  }
+
+  .amountDecision {
+    border-right: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  .decisionFooter {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .decisionSearch {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 560px) {
+  .decisionPanel {
+    border-radius: 15px;
+  }
+
+  .decisionTopbar,
+  .amountDecision,
+  .businessOutcome {
+    padding: 16px;
+  }
+
+  .decisionContext small {
+    display: none;
+  }
+
+  .miniToggle {
+    flex: 0 0 auto;
+  }
+
+  .businessAmount {
+    min-height: 64px;
+    padding: 0 14px;
+  }
+
+  .businessAmount input {
+    font-size: 28px;
+  }
+
+  .outcomeInstitution {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 7px;
+  }
+
+  .outcomeMoney {
+    display: grid;
+    gap: 6px;
+  }
+
+  .outcomeMoney strong {
+    font-size: clamp(32px, 10vw, 44px);
+  }
+
+  .savingsCallout {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .marketFacts {
+    gap: 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .marketFacts::-webkit-scrollbar {
+    display: none;
+  }
+
+  .marketFacts span {
+    flex: 0 0 auto;
+  }
+}
