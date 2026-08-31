@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { FxIntent } from "@/lib/types";
 
+type ProviderCategory = "banks" | "forex";
+
 type ApiRate = {
   bank: string;
   slug: string;
@@ -21,6 +23,7 @@ type RatesResponse = {
   currency: string;
   base: string;
   rateType: "cash" | "transaction";
+  category?: "banks" | "forex";
   demo: boolean;
   bestBuy: ApiRate | null;
   bestSell: ApiRate | null;
@@ -68,6 +71,9 @@ export default function Home() {
   const [intent, setIntent] =
     useState<FxIntent>("sell-foreign");
 
+  const [category, setCategory] =
+    useState<ProviderCategory>("banks");
+
   const [amount, setAmount] = useState(10000);
   const [query, setQuery] = useState("");
 
@@ -91,13 +97,15 @@ export default function Home() {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(
-          `/api/rates?currency=USD&type=${rateType}`,
-          {
-            cache: "no-store",
-            signal: controller.signal,
-          }
-        );
+        const endpoint =
+          category === "forex"
+            ? "/api/rates/forex?currency=USD"
+            : `/api/rates/banks?currency=USD&type=${rateType}`;
+
+        const response = await fetch(endpoint, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
 
         if (!response.ok) {
           throw new Error(
@@ -119,6 +127,10 @@ export default function Home() {
             ? err.message
             : "Could not load rates."
         );
+
+        setRates([]);
+        setCurrentCount(0);
+        setCachedCount(0);
       } finally {
         if (!controller.signal.aborted) {
           setLoading(false);
@@ -129,7 +141,17 @@ export default function Home() {
     loadRates();
 
     return () => controller.abort();
-  }, [rateType]);
+  }, [category, rateType]);
+
+  function selectCategory(nextCategory: ProviderCategory) {
+    setCategory(nextCategory);
+    setQuery("");
+
+    // Independent forex bureaus are cash-rate providers.
+    if (nextCategory === "forex") {
+      setRateType("cash");
+    }
+  }
 
   const visible = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -172,6 +194,16 @@ export default function Home() {
       : best.sell)
     : 0;
 
+  const isForex = category === "forex";
+
+  const providerLabel = isForex
+    ? "forex bureaus"
+    : "banks";
+
+  const providerLabelSingular = isForex
+    ? "forex bureau"
+    : "bank";
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -181,7 +213,7 @@ export default function Home() {
           <div>
             <strong>EthioFX</strong>
             <span>
-              Ethiopian bank FX comparison
+              Ethiopian FX comparison
             </span>
           </div>
         </div>
@@ -200,152 +232,273 @@ export default function Home() {
           <p className="eyebrow">USD / ETB</p>
 
           <h1>
-            Compare banks.
+            Compare exchange rates.
             <br />
             Keep more of your money.
           </h1>
 
           <p className="sub">
-            See which Ethiopian bank gives you the best
-            USD rate right now.
+            Compare Ethiopian banks and independent forex
+            bureaus to find the best USD rate right now.
           </p>
         </div>
       </section>
 
-      <section className="searchPanel card">
-        <div className="modeRow">
-          <div className="segmented">
-            <button
-              className={
-                intent === "sell-foreign"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setIntent("sell-foreign")
-              }
-            >
-              Selling USD
-            </button>
-
-            <button
-              className={
-                intent === "buy-foreign"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setIntent("buy-foreign")
-              }
-            >
-              Buying USD
-            </button>
-          </div>
-
-          <div className="segmented compact">
-            <button
-              className={
-                rateType === "transaction"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setRateType("transaction")
-              }
-            >
-              Transaction
-            </button>
-
-            <button
-              className={
-                rateType === "cash"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setRateType("cash")
-              }
-            >
-              Cash
-            </button>
-          </div>
-        </div>
-
-        <div className="amountSearchRow">
-          <label className="amountField">
-            <span>Amount</span>
-
-            <div className="amountWrap">
-              <b>$</b>
-
-              <input
-                type="number"
-                min={0}
-                value={amount}
-                onChange={(e) =>
-                  setAmount(
-                    Math.max(
-                      0,
-                      Number(e.target.value)
-                    )
-                  )
-                }
-              />
-
-              <strong>USD</strong>
+      <section className="categorySection">
+        <div className="marketSwitch">
+          <button
+            type="button"
+            className={`marketCard ${category === "banks" ? "activeMarket" : ""
+              }`}
+            onClick={() => selectCategory("banks")}
+            aria-pressed={category === "banks"}
+          >
+            <div className="marketCardTop">
+              <div className="marketTicker">
+                <span className="marketDot" />
+                <span>BANK MARKET</span>
+              </div>
+              <span className="marketArrow">↗</span>
             </div>
-          </label>
 
-          <label className="bankSearchField">
-            <span>Search bank</span>
+            <div className="marketCardBody">
+              <div>
+                <span className="marketCode">ETB · BANKS</span>
+                <strong>Bank FX Desk</strong>
+                <small>
+                  Cash and transaction quotes from Ethiopian banks
+                </small>
+              </div>
+            </div>
 
-            <input
-              className="search"
-              placeholder="Search by bank name"
-              value={query}
-              onChange={(e) =>
-                setQuery(e.target.value)
-              }
-            />
-          </label>
+            <div className="marketCardBottom">
+              <span>Market coverage</span>
+              <b>
+                {category === "banks" && !loading
+                  ? `${currentCount} LIVE`
+                  : "OPEN BOARD"}
+              </b>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            className={`marketCard ${category === "forex" ? "activeMarket" : ""
+              }`}
+            onClick={() => selectCategory("forex")}
+            aria-pressed={category === "forex"}
+          >
+            <div className="marketCardTop">
+              <div className="marketTicker">
+                <span className="marketDot" />
+                <span>FOREX BUREAU MARKET</span>
+              </div>
+              <span className="marketArrow">↗</span>
+            </div>
+
+            <div className="marketCardBody">
+              <div>
+                <span className="marketCode">USD / ETB · OTC</span>
+                <strong>Independent FX Desk</strong>
+                <small>
+                  Cash quotes from licensed non-bank forex bureaus
+                </small>
+              </div>
+            </div>
+
+            <div className="marketCardBottom">
+              <span>Market coverage</span>
+              <b>
+                {category === "forex" && !loading
+                  ? `${currentCount} LIVE`
+                  : "OPEN BOARD"}
+              </b>
+            </div>
+          </button>
         </div>
       </section>
 
-      {error && (
-        <section className="card statusCard errorCard">
-          <strong>
-            Couldn&apos;t load live rates.
-          </strong>
+      <section className="terminalPanel">
+        <div className="terminalToolbar">
+          <div className="toolbarGroup">
+            <div className="segmented terminalSegmented">
+              <button
+                className={
+                  intent === "sell-foreign"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setIntent("sell-foreign")
+                }
+              >
+                Selling USD
+              </button>
 
-          <span>{error}</span>
-        </section>
-      )}
-
-      {best && (
-        <section className="spotlight card">
-          <div className="spotlightBadge">
-            Best current rate
-          </div>
-
-          <div className="spotlightMain">
-            <div>
-              <span className="rankPill">#1</span>
-
-              <h2>{best.bank}</h2>
-
-              <p className="freshness">
-                Current · verified{" "}
-                {relativeTime(best.fetchedAt)}
-              </p>
+              <button
+                className={
+                  intent === "buy-foreign"
+                    ? "active"
+                    : ""
+                }
+                onClick={() =>
+                  setIntent("buy-foreign")
+                }
+              >
+                Buying USD
+              </button>
             </div>
 
-            <div className="spotlightRate">
-              <span>
-                {intent === "sell-foreign"
-                  ? "Bank buys USD at"
-                  : "Bank sells USD at"}
-              </span>
+            {!isForex ? (
+              <div className="segmented compact terminalSegmented">
+                <button
+                  className={
+                    rateType === "transaction"
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setRateType("transaction")
+                  }
+                >
+                  Transaction
+                </button>
 
+                <button
+                  className={
+                    rateType === "cash"
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    setRateType("cash")
+                  }
+                >
+                  Cash
+                </button>
+              </div>
+            ) : (
+              <div className="terminalBadge">CASH MARKET</div>
+            )}
+          </div>
+
+          <div className="toolbarInputs">
+            <label className="terminalField amountTerminal">
+              <span>AMOUNT</span>
+              <div>
+                <b>$</b>
+                <input
+                  type="number"
+                  min={0}
+                  value={amount}
+                  onChange={(e) =>
+                    setAmount(
+                      Math.max(
+                        0,
+                        Number(e.target.value)
+                      )
+                    )
+                  }
+                />
+                <strong>USD</strong>
+              </div>
+            </label>
+
+            <label className="terminalField searchTerminal">
+              <span>SEARCH</span>
+              <input
+                placeholder={
+                  isForex
+                    ? "Search forex bureau"
+                    : "Search bank"
+                }
+                value={query}
+                onChange={(e) =>
+                  setQuery(e.target.value)
+                }
+              />
+            </label>
+          </div>
+        </div>
+
+        {error && (
+          <div className="terminalAlert">
+            <strong>Live feed unavailable</strong>
+            <span>{error}</span>
+          </div>
+        )}
+
+        <div className="metricGrid">
+          <div className="metricCard accent">
+            <span>BEST BUY</span>
+            <strong>
+              {currentVisible.length
+                ? rateNumber.format(
+                  Math.max(...currentVisible.map((r) => r.buy))
+                )
+                : "—"}
+            </strong>
+            <small>
+              {currentVisible
+                .slice()
+                .sort((a, b) => b.buy - a.buy)[0]?.bank ?? "No live quote"}
+            </small>
+          </div>
+
+          <div className="metricCard">
+            <span>BEST SELL</span>
+            <strong>
+              {currentVisible.length
+                ? rateNumber.format(
+                  Math.min(...currentVisible.map((r) => r.sell))
+                )
+                : "—"}
+            </strong>
+            <small>
+              {currentVisible
+                .slice()
+                .sort((a, b) => a.sell - b.sell)[0]?.bank ?? "No live quote"}
+            </small>
+          </div>
+
+          <div className="metricCard">
+            <span>AVG BUY</span>
+            <strong>
+              {currentVisible.length
+                ? rateNumber.format(
+                  currentVisible.reduce((sum, r) => sum + r.buy, 0) /
+                  currentVisible.length
+                )
+                : "—"}
+            </strong>
+            <small>Market average</small>
+          </div>
+
+          <div className="metricCard">
+            <span>MARKET STATUS</span>
+            <strong>{loading ? "SYNC" : `${currentCount} LIVE`}</strong>
+            <small>
+              {cachedCount
+                ? `${cachedCount} cached quote${cachedCount === 1 ? "" : "s"}`
+                : "All displayed quotes current"}
+            </small>
+          </div>
+        </div>
+
+        {best && (
+          <div className="bestStrip">
+            <div className="bestStripLeft">
+              <span className="bestStripLabel">TOP QUOTE</span>
+              <strong>{best.bank}</strong>
+              <small>
+                Updated {relativeTime(best.fetchedAt)}
+              </small>
+            </div>
+
+            <div className="bestStripRate">
+              <span>
+                {intent === "sell-foreign" ? "BUY" : "SELL"}
+              </span>
               <strong>
                 {rateNumber.format(
                   intent === "sell-foreign"
@@ -353,30 +506,28 @@ export default function Home() {
                     : best.sell
                 )}
               </strong>
-
               <small>ETB / USD</small>
             </div>
 
-            <div className="spotlightValue">
+            <div className="bestStripValue">
               <span>
                 {intent === "sell-foreign"
-                  ? "You receive"
-                  : "You pay"}
+                  ? "YOU RECEIVE"
+                  : "YOU PAY"}
               </span>
-
-              <strong>
-                {money.format(bestTotal)} ETB
-              </strong>
+              <strong>{money.format(bestTotal)} ETB</strong>
             </div>
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
-      <section className="resultsSection">
-        <div className="sectionHeading">
+      <section className="resultsSection marketResults">
+        <div className="sectionHeading businessHeading">
           <div>
             <p className="eyebrow">
-              All banks
+              {isForex
+                ? "INDEPENDENT FX MARKET"
+                : "BANK FX MARKET"}
             </p>
 
             <h2>
@@ -386,142 +537,238 @@ export default function Home() {
             </h2>
           </div>
 
-          <span className="resultCount">
-            {visible.length} banks
-          </span>
+          <div className="tableMeta">
+            <span>{visible.length} providers</span>
+            <span>USD / ETB</span>
+            <span>{rateType.toUpperCase()}</span>
+          </div>
         </div>
 
         {loading && (
-          <div className="card statusCard">
-            Loading rates...
+          <div className="terminalLoading">
+            Syncing market quotes...
           </div>
         )}
 
         {!loading && (
-          <div className="bankGrid">
-            {visible.map((rate, index) => {
-              const transactionValue =
-                amount *
-                (intent === "sell-foreign"
-                  ? rate.buy
-                  : rate.sell);
-
-              const ranking =
-                rate.freshness === "current"
-                  ? currentVisible.findIndex(
-                    (item) =>
-                      item.slug === rate.slug
-                  ) + 1
-                  : null;
-
-              const isWinner = ranking === 1;
-
-              return (
-                <article
-                  key={`${rate.slug}-${rate.rateType}`}
-                  className={`bankCard ${isWinner ? "winner" : ""
-                    } ${rate.freshness === "cached"
-                      ? "cached"
-                      : ""
-                    }`}
-                >
-                  <div className="bankCardTop">
-                    <div className="rankArea">
-                      {ranking ? (
-                        <span className="rankPill">
-                          #{ranking}
-                        </span>
-                      ) : (
-                        <span className="cachedPill">
-                          Cached
-                        </span>
-                      )}
-
-                      {isWinner && (
-                        <span className="bestPill">
-                          Best rate
-                        </span>
-                      )}
-                    </div>
-
-                    <a
-                      href={rate.sourceUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="sourceLink"
-                    >
-                      Source ↗
-                    </a>
-                  </div>
-
-                  <div className="bankIdentity">
-                    <div className="bankAvatar">
-                      {rate.bank
-                        .charAt(0)
-                        .toUpperCase()}
-                    </div>
-
-                    <div>
-                      <h3>{rate.bank}</h3>
-
-                      <p>
-                        {rate.freshness === "current"
-                          ? "Current"
-                          : "Cached"}{" "}
-                        ·{" "}
-                        {relativeTime(
-                          rate.fetchedAt
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="ratePair">
-                    <div>
-                      <span>Buy</span>
-                      <strong>
-                        {rateNumber.format(
-                          rate.buy
-                        )}
-                      </strong>
-                    </div>
-
-                    <div>
-                      <span>Sell</span>
-                      <strong>
-                        {rateNumber.format(
-                          rate.sell
-                        )}
-                      </strong>
-                    </div>
-                  </div>
-
-                  <div className="valueBlock">
-                    <span>
+          <>
+            <div className="marketTableWrap">
+              <table className="marketTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Institution</th>
+                    <th>Buy</th>
+                    <th>Sell</th>
+                    <th>
                       {intent === "sell-foreign"
                         ? "You receive"
                         : "You pay"}
-                    </span>
+                    </th>
+                    <th>Updated</th>
+                    <th>Status</th>
+                    <th />
+                  </tr>
+                </thead>
 
-                    <strong>
-                      {money.format(
-                        transactionValue
-                      )}{" "}
-                      ETB
-                    </strong>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
+                <tbody>
+                  {visible.map((rate) => {
+                    const transactionValue =
+                      amount *
+                      (intent === "sell-foreign"
+                        ? rate.buy
+                        : rate.sell);
+
+                    const ranking =
+                      rate.freshness === "current"
+                        ? currentVisible.findIndex(
+                          (item) =>
+                            item.slug === rate.slug
+                        ) + 1
+                        : null;
+
+                    const isWinner = ranking === 1;
+
+                    return (
+                      <tr
+                        key={`${rate.slug}-${rate.rateType}`}
+                        className={[
+                          isWinner ? "winnerRow" : "",
+                          rate.freshness === "cached" ? "cachedRow" : ""
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        <td className="rankCell">
+                          {ranking ? (
+                            <span
+                              className={`tableRank ${isWinner ? "topRank" : ""
+                                }`}
+                            >
+                              {ranking}
+                            </span>
+                          ) : (
+                            <span className="tableRank muted">—</span>
+                          )}
+                        </td>
+
+                        <td>
+                          <div className="institutionCell">
+                            <div className="institutionAvatar">
+                              {rate.bank.charAt(0).toUpperCase()}
+                            </div>
+
+                            <div>
+                              <strong>{rate.bank}</strong>
+                              <small>
+                                {isForex
+                                  ? "Forex bureau"
+                                  : "Bank"}
+                              </small>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="numberCell">
+                          {rateNumber.format(rate.buy)}
+                        </td>
+
+                        <td className="numberCell">
+                          {rateNumber.format(rate.sell)}
+                        </td>
+
+                        <td className="valueCell">
+                          {money.format(transactionValue)} ETB
+                        </td>
+
+                        <td className="mutedCell">
+                          {relativeTime(rate.fetchedAt)}
+                        </td>
+
+                        <td>
+                          <span
+                            className={`statusPill ${rate.freshness === "current"
+                                ? "liveStatus"
+                                : "cachedStatus"
+                              }`}
+                          >
+                            {rate.freshness === "current"
+                              ? "LIVE"
+                              : "CACHED"}
+                          </span>
+                        </td>
+
+                        <td className="sourceCell">
+                          <a
+                            href={rate.sourceUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label={`Open source for ${rate.bank}`}
+                          >
+                            ↗
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {!error && visible.length === 0 && (
+              <div className="terminalLoading">
+                No providers match your search.
+              </div>
+            )}
+
+            <div className="mobileRateList">
+              {visible.map((rate) => {
+                const transactionValue =
+                  amount *
+                  (intent === "sell-foreign"
+                    ? rate.buy
+                    : rate.sell);
+
+                const ranking =
+                  rate.freshness === "current"
+                    ? currentVisible.findIndex(
+                      (item) => item.slug === rate.slug
+                    ) + 1
+                    : null;
+
+                return (
+                  <article
+                    className="mobileRateCard"
+                    key={`mobile-${rate.slug}-${rate.rateType}`}
+                  >
+                    <div className="mobileRateHead">
+                      <div>
+                        <span className="tableRank">
+                          {ranking ?? "—"}
+                        </span>
+                        <strong>{rate.bank}</strong>
+                      </div>
+
+                      <span
+                        className={`statusPill ${rate.freshness === "current"
+                            ? "liveStatus"
+                            : "cachedStatus"
+                          }`}
+                      >
+                        {rate.freshness === "current"
+                          ? "LIVE"
+                          : "CACHED"}
+                      </span>
+                    </div>
+
+                    <div className="mobileNumbers">
+                      <div>
+                        <span>BUY</span>
+                        <strong>{rateNumber.format(rate.buy)}</strong>
+                      </div>
+                      <div>
+                        <span>SELL</span>
+                        <strong>{rateNumber.format(rate.sell)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="mobileValue">
+                      <span>
+                        {intent === "sell-foreign"
+                          ? "YOU RECEIVE"
+                          : "YOU PAY"}
+                      </span>
+                      <strong>
+                        {money.format(transactionValue)} ETB
+                      </strong>
+                    </div>
+
+                    <div className="mobileMetaRow">
+                      <span>
+                        Updated {relativeTime(rate.fetchedAt)}
+                      </span>
+
+                      <a
+                        href={rate.sourceUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        Source ↗
+                      </a>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
         )}
       </section>
 
       <footer>
         <p>
-          Rates are sourced from official bank data.
-          Cached rates remain visible but are excluded
-          from best-rate rankings.
+          Rates are sourced from provider data. Cached rates
+          remain visible but are excluded from best-rate
+          rankings.
         </p>
       </footer>
     </main>

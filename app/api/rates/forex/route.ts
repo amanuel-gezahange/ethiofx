@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getLatestRates } from "@/lib/db/rates";
 import { getRates as getDemoRates } from "@/lib/rates";
 import { hasSupabaseConfig } from "@/lib/env";
+import { FOREX_BUREAU_SLUGS } from "@/lib/forex-bureaus";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -24,20 +25,24 @@ export async function GET(req: NextRequest) {
     req.nextUrl.searchParams.get("currency") || "USD"
   ).toUpperCase();
 
-  const type =
-    req.nextUrl.searchParams.get("type") === "cash" ? "cash" : "transaction";
-
   try {
-    // Use demo data only when Supabase is not configured.
+    // Forex bureaus are cash only
+    const type = "cash";
+
+    // Demo mode
     if (!hasSupabaseConfig()) {
+      const demoRates = getDemoRates(currency).filter(
+        (rate) => rate.rateType === "cash" && FOREX_BUREAU_SLUGS.has(rate.slug)
+      );
+
       return NextResponse.json({
         currency,
         base: "ETB",
-        rateType: type,
+        rateType: "cash",
+        category: "forex",
         demo: true,
-        rates: getDemoRates(currency).filter((rate) => rate.rateType === type),
-        count: getDemoRates(currency).filter((rate) => rate.rateType === type)
-          .length,
+        rates: demoRates,
+        count: demoRates.length,
         fetchedAt: new Date().toISOString()
       });
     }
@@ -46,50 +51,40 @@ export async function GET(req: NextRequest) {
 
     const now = Date.now();
 
-    const rates = dbRates.map((rate) => {
-      const fetchedTime = new Date(rate.fetched_at).getTime();
+    const rates = dbRates
+      // Keep independent forex bureaus only
+      .filter((rate) => FOREX_BUREAU_SLUGS.has(rate.slug))
+      .map((rate) => {
+        const fetchedTime = new Date(rate.fetched_at).getTime();
 
-      const ageHours = Number.isFinite(fetchedTime)
-        ? (now - fetchedTime) / (1000 * 60 * 60)
-        : null;
+        const ageHours = Number.isFinite(fetchedTime)
+          ? (now - fetchedTime) / (1000 * 60 * 60)
+          : null;
 
-      /*
-       * A rate is considered current if our system
-       * successfully fetched it within the last 24 hours.
-       *
-       * Older rates stay in the response as cached data,
-       * but they cannot win Best Buy / Best Sell.
-       */
-      const freshness =
-        ageHours !== null && ageHours <= 24 ? "current" : "cached";
+        const freshness =
+          ageHours !== null && ageHours <= 24 ? "current" : "cached";
 
-      return {
-        bank: rate.bank,
-        slug: rate.slug,
-        currency: rate.currency,
+        return {
+          bank: rate.bank,
+          slug: rate.slug,
+          currency: rate.currency,
 
-        buy: Number(rate.buy),
-        sell: Number(rate.sell),
+          buy: Number(rate.buy),
+          sell: Number(rate.sell),
 
-        rateType: rate.rate_type,
+          rateType: rate.rate_type,
 
-        sourceUrl: rate.source_url,
+          sourceUrl: rate.source_url,
 
-        effectiveAt: rate.effective_at,
-        fetchedAt: rate.fetched_at,
+          effectiveAt: rate.effective_at,
+          fetchedAt: rate.fetched_at,
 
-        freshness,
+          freshness,
 
-        ageHours: ageHours !== null ? Math.round(ageHours * 10) / 10 : null
-      };
-    });
+          ageHours: ageHours !== null ? Math.round(ageHours * 10) / 10 : null
+        };
+      });
 
-    /*
-     * Only current rates participate in rankings.
-     *
-     * Higher BUY = better when customer sells USD to bank.
-     * Lower SELL = better when customer buys USD from bank.
-     */
     const currentRates = rates.filter((rate) => rate.freshness === "current");
 
     const buyRanking = [...currentRates].sort((a, b) => b.buy - a.buy);
@@ -99,7 +94,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       currency,
       base: "ETB",
-      rateType: type,
+      rateType: "cash",
+      category: "forex",
       demo: false,
 
       bestBuy: buyRanking[0] ?? null,
@@ -116,11 +112,11 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
 
-    console.error("[api:rates]", error);
+    console.error("[api:rates:forex]", error);
 
     return NextResponse.json(
       {
-        error: "Could not load rates",
+        error: "Could not load forex bureau rates",
         detail: message
       },
       { status: 500 }

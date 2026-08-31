@@ -36,6 +36,18 @@ import { omoProvider } from "@/providers/omo";
 import { dbeProvider } from "@/providers/dbe";
 import { ahaduProvider } from "@/providers/ahadu";
 import { lionProvider } from "@/providers/lion";
+import { haronProvider } from "@/providers/haron";
+import { globalForexProvider } from "@/providers/globalforex";
+import { taypayProvider } from "@/providers/taypay";
+import { yogaProvider } from "@/providers/yoga";
+import { graceProvider } from "@/providers/grace";
+import { waliaProvider } from "@/providers/walia";
+import { fourXProvider } from "@/providers/four";
+import { ammannProvider } from "@/providers/ammann";
+import { roohaProvider } from "@/providers/rooha";
+import { ayotanProvider } from "@/providers/ayotan";
+import { dbhForexProvider } from "@/providers/dbhforex";
+import { sabaProvider } from "@/providers/saba";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -94,7 +106,19 @@ const providers: RateProvider[] = [
   omoProvider,
   dbeProvider,
   ahaduProvider,
-  lionProvider
+  lionProvider,
+  haronProvider,
+  globalForexProvider,
+  taypayProvider,
+  yogaProvider,
+  graceProvider,
+  waliaProvider,
+  fourXProvider,
+  ammannProvider,
+  roohaProvider,
+  ayotanProvider,
+  dbhForexProvider,
+  sabaProvider
 ];
 
 type IngestResult =
